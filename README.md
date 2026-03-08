@@ -55,12 +55,6 @@ It runs a model that does not differentiate between scalograms from different ch
 ### v0
 It is prepared to receive scalograms from a selected set of channels, using a color map to the user's choice. It suffers from data leakage, due to the the overlap between the epochs considered.
 
-### v1
-It is also prepared to receive scalograms from a selected set of channels, using a color map to the user's choice. It solves the problem of data leakage by destinating the first seven minutes of each session to training and the rest to testing.
-
-### v2
-It is also prepared to receive scalograms from a selected set of channels, using a color map to the user's choice. It solves the problem of data leakage by applying a Leave-One-Subject-Out (LOSO) validation.
-
 ---
 
 ## model_runner_separate
@@ -79,3 +73,9 @@ It is also prepared to receive scalograms from a selected set of channels, using
 
 ### v2
 It is also prepared to receive scalograms from a selected set of channels, using a color map to the user's choice. It solves the problem of data leakage by applying a Leave-One-Subject-Out (LOSO) validation.
+
+--
+
+# Use of Logging Package
+
+Instead of using print statements in the source code of the scalogram_cnn_project package, messages to the terminal are configured using the Logging package.
