@@ -14,7 +14,8 @@ from scalogram_cnn_project.utils.load_data_separate import load_data
 from pathlib import Path
 import os
 
-
+import logging
+logger = logging.getLogger(__name__)
 
 
 def run_model(master_parameters, input_folder, output_folder):
@@ -72,7 +73,7 @@ def run_model(master_parameters, input_folder, output_folder):
         error_classification.append(i)
 
     final_accuracy = ( 100*float( 1- len(error_classification)/len(predictions)))
-    print(f'\n\nFinal Accuracy: { final_accuracy }\n\n')
+    logger.info(f'\n\nFinal Accuracy: { final_accuracy }\n\n')
 
     metrics = [
         ("accuracy", "Accuracy"),

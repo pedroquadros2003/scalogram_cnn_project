@@ -2,6 +2,12 @@ import scalogram_cnn_project.settings.config as config
 import time
 from scalogram_cnn_project.scalogram_generation.generator_scalogram_batch_v0 import generate_scalogram
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("scalogram_cnn_project").setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
 SEED = 42
 OVERLAP = 0.85
 CMAP = "gray" # gray 1 channel or viridis 3 channels RGB
@@ -20,7 +26,7 @@ if __name__ == "__main__":
         for session in sessions:
             for channel in channels:
                 
-                print(f"Starting {subject}-{session} channel {channel}")
+                logger.info(f"Starting {subject}-{session} channel {channel}")
                 if config.drozy_valid_tests[subject][session]:
                 
                     drowsiness_level = 1 if config.drozy_kss_scale[subject][session]>=drowsiness_threshold else 0
@@ -48,5 +54,5 @@ if __name__ == "__main__":
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
+    logger.info(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
     

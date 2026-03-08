@@ -7,6 +7,8 @@ import scalogram_cnn_project.settings.config as config
 from pathlib import Path
 
 
+import logging
+logger = logging.getLogger(__name__)
 
 def load_data(folder="GeneratedScalograms",
               channels=["C3", "C4"],
@@ -96,8 +98,8 @@ def load_data(folder="GeneratedScalograms",
     Subject_array= np.array(Subject_list)
     Subject_array = Subject_array[:, np.newaxis]
 
-    print("Final dataset shape:", X.shape)
-    print("Labels shape:", Y.shape)
+    logger.info("Final dataset shape: %s", X.shape)
+    logger.info("Labels shape: %s", Y.shape)
 
     return X, Y, Subject_array
 
@@ -106,7 +108,6 @@ def load_data(folder="GeneratedScalograms",
 
 if __name__ == "__main__":
 
-    print("hello")
     load_data(folder=config.DATA_DIR / "generated_scalograms_gray_overlap_0.85",
               channels=["C3", "C4"],
               cmap="gray")

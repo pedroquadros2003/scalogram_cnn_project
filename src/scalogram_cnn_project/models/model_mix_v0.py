@@ -13,6 +13,9 @@ from keras.layers import Input
 from pathlib import Path
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
+
 def create_model(master_parameters):
 
     master_seed = master_parameters["seed"]

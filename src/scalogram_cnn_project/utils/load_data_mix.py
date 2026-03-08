@@ -5,6 +5,8 @@ import os
 from scalogram_cnn_project.utils.list_files import list_files
 import scalogram_cnn_project.settings.config as config
 
+import logging
+logger = logging.getLogger(__name__)
 
 def load_data(folder = "GeneratedScalograms",
               channels=["C3", "C4"],
@@ -36,7 +38,7 @@ def load_data(folder = "GeneratedScalograms",
         full_path = os.path.join(folder, file)
 
         if not os.path.exists(full_path):
-            print(f"Warning: {file} not found, skipping.")
+            logger.warning(f"Warning: {file} not found, skipping.")
             continue
 
         if cmap=="viridis":
@@ -59,8 +61,8 @@ def load_data(folder = "GeneratedScalograms",
     Y = np.array(Y)
     Y = Y[:, np.newaxis]
 
-    print("Final dataset shape:", X.shape)
-    print("Labels shape:", Y.shape)
+    logger.info("Final dataset shape: %s", X.shape)
+    logger.info("Labels shape: %s", Y.shape)
 
     return (X, Y)
 
@@ -68,7 +70,6 @@ def load_data(folder = "GeneratedScalograms",
 
 if __name__ == "__main__":
 
-    print("hello")
     load_data(folder=config.DATA_DIR / "generated_scalograms_C3C4_gray_overlap_0.85",
               channels=["C3", "C4"],
               cmap="gray")

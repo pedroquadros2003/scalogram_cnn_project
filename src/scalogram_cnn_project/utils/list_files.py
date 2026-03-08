@@ -2,6 +2,9 @@ import os
 
 FOLDER_PATH = "/home/Workspace/GeneratedScalogramsGrayMoreOverlap"
 
+import logging
+logger = logging.getLogger(__name__)
+
 def list_files(folder_path):
     # Get all files
     files = [

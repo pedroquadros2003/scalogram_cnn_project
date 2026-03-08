@@ -6,6 +6,9 @@ import mne
 from scipy.signal import butter, filtfilt
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 
 def generate_epoch_object(

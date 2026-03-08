@@ -12,6 +12,9 @@ import cv2
 from pathlib import Path
 import scalogram_cnn_project.settings.config as config
 
+import logging
+logger = logging.getLogger(__name__)
+
 def generate_scalogram(
         subject = 1, session = 1, channel = "Fz",
         images_dir = config.OUTPUT_DIR / f'subject1_session1_channelFz',
@@ -31,7 +34,6 @@ def generate_scalogram(
         ## Final sized of the scalogram, designed to be input of a CNN-2D
         final_width_px = 64,
         final_height_px = 64,
-        verbose = True
 ):
 
     ## Importing the edf file
@@ -79,7 +81,7 @@ def generate_scalogram(
     epoch_index = int(0)
 
     while  epoch_index*step_sample_duration + epoch_sample_duration < tot_samples :
-        if verbose: print (f"{epoch_index*step_sample_duration + epoch_sample_duration} < {tot_samples}?")
+        logger.info(f"{epoch_index*step_sample_duration + epoch_sample_duration} < {tot_samples}?")
 
         ## Now, we compute the CWT coefficients in dB
         freqs = np.linspace(freq_min, freq_max, 256)

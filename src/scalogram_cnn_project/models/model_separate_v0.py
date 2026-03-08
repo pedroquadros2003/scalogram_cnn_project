@@ -11,6 +11,8 @@ from keras.layers import Input
 import numpy as np
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
 
 def create_model(master_parameters):
 

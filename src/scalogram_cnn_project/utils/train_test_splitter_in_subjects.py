@@ -2,6 +2,9 @@
 import numpy as np
 from imblearn.under_sampling import RandomUnderSampler
 
+import logging
+logger = logging.getLogger(__name__)
+
 def train_test_split(X,
                      y,
                      random_state,
@@ -25,15 +28,14 @@ def train_test_split(X,
     y_train = y_train[indices]
 
 
-    print("Shapes:")
-    print(f"x_train : {x_train.shape}")
-    print(f"x_test  : {x_test.shape}")
-    print(f"y_train : {y_train.shape}")
-    print(f"y_test  : {y_test.shape}")
+    logger.info("Shapes:")
+    logger.info("x_train : %s", x_train.shape)
+    logger.info("x_test  : %s", x_test.shape)
+    logger.info("y_train : %s", y_train.shape)
+    logger.info("y_test  : %s", y_test.shape)
 
 
-    print("For debug:\n")
-    print(len(np.where( y_train == 0 )[0]))
-    print(len(np.where( y_train == 1 )[0]))
+    logger.debug("The number of 0s in the training set is: %d", len(np.where( y_train == 0 )[0]))
+    logger.debug("The number of 1s in the training set is: %d", len(np.where( y_train == 1 )[0]))
 
     return x_train, x_test, y_train, y_test 

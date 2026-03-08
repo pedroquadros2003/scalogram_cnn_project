@@ -4,6 +4,13 @@ from pathlib import Path
 from autoreject import AutoReject, get_rejection_threshold
 
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("scalogram_cnn_project").setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+
 if __name__ == "__main__": 
 
     epochs = generate_epoch_object(subject=2, session=2, verbose=False)
@@ -16,4 +23,4 @@ if __name__ == "__main__":
     reject_log.plot()
 
     data_cleaned = epochs_clean.get_data()
-    print (data_cleaned.shape)
+    logger.info(data_cleaned.shape)

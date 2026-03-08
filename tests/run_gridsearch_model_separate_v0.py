@@ -7,6 +7,11 @@ import time
 from scalogram_cnn_project.model_runners.model_runner_separate_v0 import run_model
 import scalogram_cnn_project.settings.config as config
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("scalogram_cnn_project").setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 OVERLAP = 0.85
 CMAP = "gray"
 INPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap_{OVERLAP}"
@@ -68,10 +73,10 @@ if __name__ == "__main__":
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
+    logger.info(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
 
 
-    print(f"Total combinations: {len(grid_master_parameters)}\n\n")
-    print(results)
+    logger.info(f"Total combinations: {len(grid_master_parameters)}\n\n")
+    logger.info(results)
 
 

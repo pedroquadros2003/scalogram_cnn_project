@@ -11,6 +11,8 @@ from scipy.signal import butter, filtfilt
 from pathlib import Path
 import scalogram_cnn_project.settings.config as config
 
+import logging
+logger = logging.getLogger(__name__)
 
 def butter_bandpass(lowcut, highcut, fs, order=4):
     nyq = 0.5 * fs
@@ -49,7 +51,7 @@ def generate_scalogram(subject=11,
     sample_data_folder = config.DROZY_DIR
     sample_data_raw_file = sample_data_folder / "psg" / f"{subject}-{session}.edf"
     
-    print(f"Loading: {sample_data_raw_file}")
+    logger.info(f"Loading: {sample_data_raw_file}")
     raw = mne.io.read_raw_edf(sample_data_raw_file, preload=True)
     if do_resampling: raw.resample(resample_freq)
 
@@ -114,7 +116,7 @@ def generate_scalogram(subject=11,
     resized_image = cv2.resize(image, (final_width_px, final_height_px), interpolation=cv2.INTER_CUBIC)
     cv2.imwrite(str(save_path), resized_image)
     
-    print(f"Scalogram saved and resized at: {save_path}")
+    logger.info(f"Scalogram saved and resized at: {save_path}")
 
 
 
