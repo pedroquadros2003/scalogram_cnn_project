@@ -1,0 +1,9 @@
+venv
+venv/
+__pycache__/
+.git
+.venv
+.venv/
+venv_wsl
+venv_wsl/
+*.egg-info/

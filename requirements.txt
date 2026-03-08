@@ -1,0 +1,15 @@
+autoreject
+mne
+ipykernel
+scikit-learn
+asttokens<3.0.0
+ipywidgets
+pyvista
+pyvistaqt
+PyQt6
+nibabel
+pandas
+opencv-python
+PyWavelets
+imbalanced-learn
+tensorflow[and-cuda]

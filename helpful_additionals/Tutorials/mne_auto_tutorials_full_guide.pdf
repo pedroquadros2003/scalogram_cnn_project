@@ -1,0 +1,615 @@
+%PDF-1.4
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R /F3 4 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
+endobj
+4 0 obj
+<<
+/BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding /Name /F3 /Subtype /Type1 /Type /Font
+>>
+endobj
+5 0 obj
+<<
+/Contents 70 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 69 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+6 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/intro/10_overview.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 761.8898 275.4 773.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+7 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/intro/15_inplace.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 729.8898 153.13 741.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+8 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/intro/20_events_from_raw.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 697.8898 181.49 709.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+9 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/intro/30_info.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 665.8898 150.35 677.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+10 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/intro/40_sensor_locations.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 633.8898 187.03 645.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+11 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/intro/50_configure_mne.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 601.8898 160.88 613.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+12 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/intro/70_report.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 569.8898 194.24 581.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+13 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/io/10_reading_meg_data.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 485.8898 201.48 497.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+14 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/io/20_reading_eeg_data.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 453.8898 199.82 465.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+15 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/io/30_reading_fnirs_data.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 421.8898 205.92 433.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+16 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/io/60_ctf_bst_auditory.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 389.8898 150.34 401.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+17 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/io/70_reading_eyetracking_data.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 357.8898 173.14 369.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+18 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/raw/10_raw_overview.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 273.8898 152.58 285.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+19 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/raw/20_event_arrays.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 241.8898 139.24 253.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+20 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/raw/30_annotate_raw.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 209.8898 174.78 221.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+21 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/raw/40_visualize_raw.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 177.8898 155.33 189.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+22 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 93.88976 169.81 105.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+23 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/15_handling_bad_channels.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 61.88976 151.47 73.88976 ] /Subtype /Link /Type /Annot
+>>
+endobj
+24 0 obj
+<<
+/Annots [ 6 0 R 7 0 R 8 0 R 9 0 R 10 0 R 11 0 R 12 0 R 13 0 R 14 0 R 15 0 R 
+  16 0 R 17 0 R 18 0 R 19 0 R 20 0 R 21 0 R 22 0 R 23 0 R ] /Contents 71 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 69 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 
+  /Trans <<
+
+>> /Type /Page
+>>
+endobj
+25 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/20_rejecting_bad_data.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 787.8898 162.59 799.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+26 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/25_background_filtering.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 755.8898 141.46 767.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+27 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/30_filtering_resampling.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 723.8898 158.14 735.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+28 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/35_artifact_correction_regression.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 691.8898 184.26 703.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+29 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/40_artifact_correction_ica.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 659.8898 150.35 671.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+30 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/45_projectors_background.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 627.8898 168.7 639.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+31 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/50_artifact_correction_ssp.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 595.8898 153.14 607.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+32 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/55_setting_eeg_reference.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 563.8898 165.37 575.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+33 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/59_head_positions.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 531.8898 182.04 543.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+34 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/60_maxwell_filtering_sss.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 499.8898 148.15 511.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+35 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/70_fnirs_processing.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 467.8898 141.47 479.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+36 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/80_opm_processing.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 435.8898 160.37 447.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+37 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/preprocessing/90_eyetracking_data.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 403.8898 168.16 415.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+38 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/epochs/10_epochs_overview.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 319.8898 168.14 331.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+39 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/epochs/15_baseline_regression.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 287.8898 223.17 299.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+40 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/epochs/20_visualize_epochs.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 255.8898 161.48 267.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+41 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/epochs/30_epochs_metadata.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 223.8898 119.24 235.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+42 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/epochs/40_autogenerate_metadata.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 191.8898 165.9 203.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+43 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/epochs/50_epochs_to_data_frame.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 159.8898 199.81 171.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+44 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/epochs/60_make_fixed_length_epochs.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 127.8898 153.15 139.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+45 0 obj
+<<
+/Annots [ 25 0 R 26 0 R 27 0 R 28 0 R 29 0 R 30 0 R 31 0 R 32 0 R 33 0 R 34 0 R 
+  35 0 R 36 0 R 37 0 R 38 0 R 39 0 R 40 0 R 41 0 R 42 0 R 43 0 R 44 0 R ] /Contents 72 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 69 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 
+  /Trans <<
+
+>> /Type /Page
+>>
+endobj
+46 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-sensor-space/10_stats_overview.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 787.8898 170.39 799.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+47 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-sensor-space/20_visualize_stats.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 755.8898 197.05 767.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+48 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-sensor-space/30_cluster_1samp.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 723.8898 162.02 735.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+49 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-sensor-space/40_cluster_between_time_freq.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 691.8898 199.8 703.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+50 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-sensor-space/50_rm_anova.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 659.8898 175.92 671.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+51 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-sensor-space/60_spatiotemporal_f.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 627.8898 148.12 639.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+52 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-source-space/10_source_space_t_test.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 543.8898 169.79 555.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+53 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-source-space/20_source_space_2sample.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 511.8898 180.91 523.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+54 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/stats-source-space/30_source_space_rm_anova.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 479.8898 169.79 491.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+55 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/machine-learning/30_strf.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 395.8898 120.9 407.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+56 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/machine-learning/50_decoding.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 363.8898 124.79 375.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+57 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/clinical/20_seeg.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 279.8898 110.93 291.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+58 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/clinical/30_ecog.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 247.8898 112.03 259.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+59 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/clinical/60_sleep.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 215.8898 163.72 227.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+60 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/simulation/10_array_objs.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 131.8898 148.14 143.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+61 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/simulation/70_point_spread.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 99.88976 155.35 111.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+62 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/simulation/80_dics.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 67.88976 179.25 79.88976 ] /Subtype /Link /Type /Annot
+>>
+endobj
+63 0 obj
+<<
+/Annots [ 46 0 R 47 0 R 48 0 R 49 0 R 50 0 R 51 0 R 52 0 R 53 0 R 54 0 R 55 0 R 
+  56 0 R 57 0 R 58 0 R 59 0 R 60 0 R 61 0 R 62 0 R ] /Contents 73 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 69 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 
+  /Trans <<
+
+>> /Type /Page
+>>
+endobj
+64 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/visualization/10_publication_figure.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 735.8898 162.03 747.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+65 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://mne.tools/stable/auto_tutorials/visualization/20_ui_events.html)
+>> /Border [ 0 0 0 ] /Rect [ 42 703.8898 110.35 715.8898 ] /Subtype /Link /Type /Annot
+>>
+endobj
+66 0 obj
+<<
+/Annots [ 64 0 R 65 0 R ] /Contents 74 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 69 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 
+  /Trans <<
+
+>> /Type /Page
+>>
+endobj
+67 0 obj
+<<
+/PageMode /UseNone /Pages 69 0 R /Type /Catalog
+>>
+endobj
+68 0 obj
+<<
+/Author (\(anonymous\)) /CreationDate (D:20260130114611-03'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20260130114611-03'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (\(unspecified\)) /Title (\(anonymous\)) /Trapped /False
+>>
+endobj
+69 0 obj
+<<
+/Count 5 /Kids [ 5 0 R 24 0 R 45 0 R 63 0 R 66 0 R ] /Type /Pages
+>>
+endobj
+70 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 441
+>>
+stream
+Gar'%?Vc;.'ZJu*'^(Sra(Y4&m8;,?@ao)>a!ITJ-Zq\ZPUPGG$So">9q(_2Hd;TG>DA4LlgLVLmKI2a#0%er@#JCnnVjU>^-+AR/i]RR$J+OfRM:tlqh4q?8BXIa&f,#s_:G.lkFL"@)6>e$6AQ?TbNj?Jf"0(i\8.UcTZ_)<f@Y-ciP?4.Y+3@=UJj%$pk$#loYQ7%hW\:n/N4p1Fc+Mk^b9s.WWQirB"ro$_`l<L?Y$`;C6GGjV*hD$=$u+1g^&>4VLZi(cK=DkB=mtIk=_iS(aVQCeBCFb&uS=0pM2/:>`B2((Z%phCh8c\!k(6D`(u?"Wif$`et=V;&IG^9N[dKQ6N*p[q7$8LRlrW/l]ahPS;N:d+u-(.`K,0[=i=@A"0&;*Q@3\m18T5q/Kp.VZaNaifB'8Qgl62DH<jqaVt/fQi;E[`ca2(~>endstream
+endobj
+71 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 1277
+>>
+stream
+Gat=+?$"^\&:Mm.fZ1?4!p1_ha.("=1DAKte@0j,lnp2R-!-8'o[huc$maUH]2ulY$tJPcm-:+sFT_gC7/f8"!3QsuhaS.d+itlGT8t.@J2fRbE>!+iNe]<ZNQu1Cb8K]?#6Xuk02?2!["flVU4sS5W!`iPH7uC$=d<0e2iq#2_jN2#+F/P!UH@XWqAc(aT"[;Pi!>*@5W!N&rS&J`"*`1R%\.uNTjD_DK?@UDht?%)%[^d9A%7(I[nE*<NdHg+]2[3Wn8pgL@riR3XCkNDAHqE?'E_j5ba?Zo:mHLSKj(+XL(m?K6^k'7k8Q#iO>4q/b?cW"MG<G%WARc]):t6ZZ%7Ku?<2Y\"O5M1J>Gl)jp[IY>cCfKC.P3ZgR)%@(C/Rl^\C#KD&dn-TsP#EXU<+g+5M/F5HSOsF^'gd73sENaj*/H.?u`7!0es).k=&(-t];3g=?kX,RTMV=X)YE>h)t5<g0I4h09SlBGhVN@/NU*-(3je3[*/sKR/*@4!G6A"%?D?HAC3L4h;&urgcIBcLDZ(-k/a5W7:DoNDcL8$b+#f*<gF/';N;JEki//<BfLiYkFkgB#0MA<\iirb%I]s].:%L/4^ec@T6p1"d7Ne/V&oTbXWf*@R58+PUF;-]gKDs0@Q4Di0.J<4F\OWC>6]*>,-0'Ve#cl6?]C<R&VP_N*d'0?Z!jfQ*;:^*kc.^^Q/TJ^bYnBbaAiVG.'PSpim_DYPZ0?^9;Y8i(e)+Y'>h`1>T5+bP%D4p-Rc716Ks[Y&qK@1,^0W40+3[r+Dhc4mACZh0?L6Ag"guofBe7N6?.pODrt=%ta3!6pL^!s7E]NJ-T'Zi&Gak9!$3Y^$cKtn7Wa,YCg;-S_P9'-3*b[_k=*&"]+kc%9f*0-E0&4U(l6TF<'*4hNEd9m('Ru]$#1/h6.cc/uaHQQ9X$]6RBG<8a,PXLQc6)+'q]/]he%,&(ba5[]9ZB-c(7P:%i9_*jkZDWhr`)WS6gQlapk]-3rlTe/Sp>2V-h@fKTUEX='4OhW18E#;'j5^[uA.lZ.5l)=3[(Uf8s87.OW4NbNIXl?Jn'7SS>/pef3H[ckZR"T>=iBQ.X_HkG_7X,7;>it=tXl;gLld]&st0tgqe*uJ&b.rHg`poh@Tgn8BVK">S"g$qqo6rBn"*iY?=75`S[U"6[Tn!<3,aR)lRaXMNcf@H3q(\[RAV/adW1<"9XV+M'S;p-u.kNuIXgELf_b\8cmrFkFPQ7ba)-lPgddph-Fka"jfC*D3oF<g!f/E,YsS1=1'~>endstream
+endobj
+72 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 1179
+>>
+stream
+Gatn%_,B#A&;KX9`?(^/JN0#B*%;=K1Spr#m>6b*2i_'G;C+=LIJU*W]-OL4e9!h5M.3UZBr1j]7PL\eo'`X]Gb)_!70M!@dNq<O@1;CI=JU<$pS,*/4Fu2Ppi&D]SPoZ>TTJC3.+&aW$DM#HG'#HiB^>pAqaVI,ItM)_ZWn2`a)]7hARH2cjoEi5c-/?OdT<[Q7SBR_=!>--JCKZPX_VK&#KnV#Kpp3?*;X'#+O3dTm'=XY:t?"\>+3:6B&<qICQXB3dhPKg!@Dh`gb)`4)N[Ur==L4P$-R4VIaIWLb<[/$7`-]U;DSH&VGt*G>oP9R6a@F?L&837"O/Lk-[%P?%HTb%Q7lBQ#ur^_i<QhBqHXZCiDP?5Dm5C?^VVn[5]'bqBT_P]k^MajjM+#gStC^M01Cm.kp7mN90*9orAkUng_ap:8Oo13$qDgXANt>p=E)kq3lT3aVcD3A49[&*R@(CeeC3M;8ZoZ*MXMiRR1GTd0X3HWLbI]j-#l>=Ol=kpJ.$,>(d,]bb]pA5'"$N)lj@1+GY>D:e0m'\+4jBah8Qo'`hPb\`FuKQhBD\DSKt;l;-S*?Z]b?!p(9Gn$DUcL2YEV6,HQ&X\D=o']Y-Jl`Js&5eW_<c*5NB%s+09t6O"P]?Sb;q%Ktjr![M<QSg4")j9<+\3a\;E`0o_BbF9c%+IuQ#G/Dtt:C?hNreg#SS.&HD0&t"<.mI5Do=RI<>UQLA,BQ:i5h2-oUfOQ.BOun)!DgTScNicKZ,)PKNIIXJG*3U4+ho5f6<qF[$@2$B\XiMEi7UJ@s896&)0DO`Mjh.5H+)?A6rUS+rIpEfb4JFj*it=Mq2:l</W[!91L'1<cQlUP[CUr\F)i'F,pep^&o^PeqX%ncOufbXDb##qd#@D[mUBOu26Io#If4K"p*,!r_9%@NI)7<[_ooVEXZ-(ijq<[LUUmugA`NUsZ,A9<mNuL\e?!nh8=Br?lMMM"dNs5KXq=7W""_&7d59IQ?WTHqoRcqA[W5??TENnaKV3ZjhhlQRPA-i0nq#KijE"FYQYhY-.`+>[.k6_%)k-UiZO2=Bd('jt[C51;rKZu!ZPD%%41n["I'6hERee@L$%e+1*a;%Ajg$5mHRdl.DP*^&;kMIj1gl9kX\\t/N-$"BDJ6?ceIMrn6ehL0@*75V5?M=^(M]nu:&~>endstream
+endobj
+73 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 1117
+>>
+stream
+Gatn&;/b/L'Z],..F)FIV6lVc5TdHNVCRY/.oGcY?JOTAhAeV`SYGQ$n(<1hH:*dq.2"ta-iTZXrr6KG?pG51T1&qQ.>Q(a"#bg[#qW^0+TDMlr9W#QgTJbT0HR,.PKEKN,3T7=@BXTX,KMBCW=QV2%=nudM[&,p.l^lqmY#_Wi"C]HU-Vd%4E2kYqZ670mHu,'npfSFVAiN5LfP;`''u*,L\+$;kVY'/RpLb]$6e&?oGdpF//J"XfS3&hg[B6gqq@]KCKYgih[3R\rW6-%PZUh6cVc9tW2qnc+*MTD$[X*;ld1=5_"VoP0X89j-%>m@7<te2;KK`+F@Hs@[*]2&"3XtqHVm;nnR"V26FT6[:hWjdd-bf4HSea_JfmCYL&X[:,A1)_a:DAtG??1,EnaFfiT&bGa,aMnq*l_NlMnc7?*iu_OICGZ+cCPGm44A[XD2TCUpJ"kkYrSW<TL>rlGlr!^_KF+<7m+TFhKHjqk$>rlb#SI9P<Rq$"-mQ2^=sHIRI;d`BlM<XRcUf;/R+gN+EiCRfcM6>=I8MF12K\W^M._:kpZ<?dLICloNiZ?<OD.Tml0Y0%/'82`5lU,!o`:']fhYe0*]DF,o8)Z;^`l\FjaHcogQE4CYC"RMOH"U5G8,-u1_)-HD(),NUoJ`EFZC6#P1)JKk0Z,l4$6j:AS&Raf\Ze^[b]o>]Vk$`onD7T^"^,uhHDfjCI1Mg!2o(:s.Yi$HShmlSSH]TIk78u#Dfbp$o5U.N5`M\R"n2#S+HT)@X\9N-,9Q0Eff[dllpjU^goNJI%e\'sU)f5/(Ao:Ip*I0"sH]H9s3?I5JM+%b;<`YZ/"K>TPBGaR@OI__ok$6p%4dOW6$ouk(!)o>rS]fEnfM"cEfXSj_dKetNo[GgCme./[_I8-%t=&<ZVeWnj^T9L4_UrR#cY0tr)9N7#,@isHo`S[5F+."-4b25%0o0]jj7U$QV&D`K'#lXCJ\np,Yftq]0XF#j^$'#j`@S!m]:$oe\Qu!jtJ%qBDTH[KfM4qm$q+n0sIhSfh:bK"1-!nHo;8qdX?JE1BlJ$f,(3Hb@'htdPhh_g^qYi.*_-[ZMNHn)f?#fC\B'lAI]_u'l'>rKF(g2O$~>endstream
+endobj
+74 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 311
+>>
+stream
+Gat=e>t`'h'Sc)J/)JH!f_*b*G.3&*@2BE+pGGV0d5LC?&(l?E:&NXc0L5cNH#qj*iIhb:L]"8hi)X<q,Z"nPJ<DU;>iAG8Xe=",8W5K!_^o#&dtCj'MJ`pO<^]-UV3l#^Rl#9>+-a]Bk)L$9EAuqnn+3+iErl(DH0NE9'1>MaL`amEWWlb@_V$[K71SfuJ`'s]Y#otdQ.>\BLP!^clH]"6P+Q^Wi4a)G1U8IW<__JFBIl3`g@SXS6@7q]_K3H_D"1li'q7.q3@FX41[;q;LA+H-9s8E:H6+r`j*go8R*sB36G*Cq&r&:~>endstream
+endobj
+xref
+0 75
+0000000000 65535 f 
+0000000061 00000 n 
+0000000112 00000 n 
+0000000219 00000 n 
+0000000331 00000 n 
+0000000446 00000 n 
+0000000651 00000 n 
+0000000856 00000 n 
+0000001061 00000 n 
+0000001274 00000 n 
+0000001476 00000 n 
+0000001691 00000 n 
+0000001903 00000 n 
+0000002108 00000 n 
+0000002320 00000 n 
+0000002532 00000 n 
+0000002746 00000 n 
+0000002958 00000 n 
+0000003178 00000 n 
+0000003387 00000 n 
+0000003596 00000 n 
+0000003805 00000 n 
+0000004015 00000 n 
+0000004244 00000 n 
+0000004472 00000 n 
+0000004815 00000 n 
+0000005040 00000 n 
+0000005267 00000 n 
+0000005494 00000 n 
+0000005731 00000 n 
+0000005961 00000 n 
+0000006188 00000 n 
+0000006418 00000 n 
+0000006646 00000 n 
+0000006867 00000 n 
+0000007095 00000 n 
+0000007318 00000 n 
+0000007539 00000 n 
+0000007762 00000 n 
+0000007977 00000 n 
+0000008196 00000 n 
+0000008412 00000 n 
+0000008627 00000 n 
+0000008847 00000 n 
+0000009067 00000 n 
+0000009291 00000 n 
+0000009652 00000 n 
+0000009878 00000 n 
+0000010105 00000 n 
+0000010330 00000 n 
+0000010566 00000 n 
+0000010786 00000 n 
+0000011014 00000 n 
+0000011245 00000 n 
+0000011477 00000 n 
+0000011710 00000 n 
+0000011923 00000 n 
+0000012141 00000 n 
+0000012347 00000 n 
+0000012553 00000 n 
+0000012760 00000 n 
+0000012974 00000 n 
+0000013190 00000 n 
+0000013398 00000 n 
+0000013738 00000 n 
+0000013963 00000 n 
+0000014179 00000 n 
+0000014411 00000 n 
+0000014481 00000 n 
+0000014762 00000 n 
+0000014850 00000 n 
+0000015382 00000 n 
+0000016751 00000 n 
+0000018022 00000 n 
+0000019231 00000 n 
+trailer
+<<
+/ID 
+[<3a6a22a7b7237503c67599b056ded01f><3a6a22a7b7237503c67599b056ded01f>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 68 0 R
+/Root 67 0 R
+/Size 75
+>>
+startxref
+19633
+%%EOF
