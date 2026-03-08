@@ -6,7 +6,7 @@ from keras.layers import MaxPooling2D
 from keras.layers import Dense
 from keras.layers import Flatten
 from keras.layers import Dropout
-
+from keras.layers import Input
 
 import numpy as np
 from pathlib import Path
@@ -35,7 +35,8 @@ def create_model(master_parameters):
 
 
     model = Sequential()
-    model.add(Conv2D(64, (3,3), activation='relu', input_shape=(64,64,color_channels_per_image*len(master_channels)))),
+    model.add( Input(shape = (64,64,color_channels_per_image*len(master_channels)) ) ),
+    model.add(Conv2D(64, (3,3), activation='relu')),
     model.add(keras.layers.BatchNormalization(
                                 momentum=master_momentum,
                                 epsilon=master_epsilon,

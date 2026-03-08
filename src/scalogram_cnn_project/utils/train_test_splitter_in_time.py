@@ -15,17 +15,20 @@ def train_test_split(X, y, test_size, random_state, overlap):
 
     rus = RandomUnderSampler(random_state=random_state)
 
-    rus.fit_resample(np.zeros(len(y)).reshape(-1,1), y_test)
+    rus.fit_resample(np.zeros(len(y_test)).reshape(-1,1), y_test)
     indices = rus.sample_indices_
     x_test = x_test[indices]
     y_test = y_test[indices]
 
-    rus.fit_resample(np.zeros(len(y)).reshape(-1,1), y_train)
+    rus.fit_resample(np.zeros(len(y_train)).reshape(-1,1), y_train)
     indices = rus.sample_indices_
     x_train = x_train[indices]
     y_train = y_train[indices]
 
-    print(y_train.shape)
-    print(y_test.shape)
+    print("Shapes:")
+    print(f"x_train : {x_train.shape}")
+    print(f"x_test  : {x_test.shape}")
+    print(f"y_train : {y_train.shape}")
+    print(f"y_test  : {y_test.shape}")
 
     return x_train, x_test, y_train, y_test 

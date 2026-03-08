@@ -10,17 +10,18 @@ from keras.layers import Input
 
 import numpy as np
 from pathlib import Path
+import os
 
 
 def create_model(master_parameters):
 
     master_channels = master_parameters["channels"]
-    master_cmap = master_parameters["cmap"]
     master_seed = master_parameters["seed"]
     master_epsilon = master_parameters["epsilon"]
     master_momentum = master_parameters["momentum"]
     master_optimizer = master_parameters["optimizer"]
-
+    master_cmap = master_parameters["cmap"]
+    
 
     color_channels_per_image = 3
 
@@ -33,10 +34,9 @@ def create_model(master_parameters):
 
 
 
-
     model = Sequential()
-    model.add( Input(shape=(64,64,color_channels_per_image*len(master_channels))) ),
-    model.add(Conv2D(64, (3,3), activation='relu')),
+    model.add( Input(shape = (64,64,color_channels_per_image*len(master_channels)) ) ),
+    model.add(Conv2D(64, (3,3), activation='relu') ),
     model.add(keras.layers.BatchNormalization(
                                 momentum=master_momentum,
                                 epsilon=master_epsilon,
