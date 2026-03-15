@@ -22,10 +22,21 @@ def create_model(master_parameters):
     master_epsilon = master_parameters["epsilon"]
     master_momentum = master_parameters["momentum"]
     master_optimizer = master_parameters["optimizer"]
+    master_cmap = master_parameters["cmap"]
+    
+    
+    color_channels_per_image = 3
+
+    if master_cmap == "gray":
+        color_channels_per_image=1
+    elif master_cmap == "viridis":
+        color_channels_per_image=3
+    else:
+        color_channels_per_image=3
 
 
     model = Sequential()
-    model.add( Input(shape=(64,64,1)) ),
+    model.add( Input(shape=(64,64,color_channels_per_image)) ),
     model.add(Conv2D(64, (3,3), activation='relu')),
     model.add(keras.layers.BatchNormalization(
                                 momentum=master_momentum,
@@ -60,7 +71,6 @@ def create_model(master_parameters):
 
     metrics=[
             keras.metrics.BinaryAccuracy(threshold=0.0, name="accuracy"),
-            keras.metrics.AUC(num_thresholds=200, curve="ROC", from_logits=True, name="auc"),
             ]
 
     model.compile(optimizer=master_optimizer,

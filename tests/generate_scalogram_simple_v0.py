@@ -34,4 +34,4 @@ if __name__ == "__main__":
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
-    logger.info(f"Elapsed time: {elapsed_time:.4f} seconds")
+    logger.info("Elapsed time: %s seconds", elapsed_time)

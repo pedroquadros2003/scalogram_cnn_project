@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from scalogram_cnn_project.utils.load_data_separate import load_data
 from pathlib import Path
 import os
-from scalogram_cnn_project.models.model_separate_v1 import create_model
+from scalogram_cnn_project.models.model_separate import create_model
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def run_model(master_parameters, input_folder, output_folder):
     tf.config.experimental.enable_op_determinism()
 
 
-    (X, y, Subject_array) = load_data(folder=input_folder,
+    X, y, Subject_array, _= load_data(folder=input_folder,
                        channels=master_channels,
                        cmap=master_cmap)
 

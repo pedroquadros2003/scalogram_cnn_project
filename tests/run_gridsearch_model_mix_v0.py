@@ -16,9 +16,13 @@ logger = logging.getLogger(__name__)
 
 OVERLAP = 0.85
 CMAP = "gray"
-INPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap_{OVERLAP}"
-OUTPUT_FOLDER = "useless"
 CHANNELS = ["C3", "C4"]
+
+channel_string = "".join(CHANNELS)
+
+INPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap{OVERLAP}"
+OUTPUT_FOLDER = "useless"
+
 
 
 if __name__ == "__main__":
@@ -76,10 +80,10 @@ if __name__ == "__main__":
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    logger.info(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
+    logger.info("Elapsed time: %s seconds\n\n", elapsed_time)
 
 
-    logger.info(f"Total combinations: {len(grid_master_parameters)}\n\n")
+    logger.info("Total combinations: %s\n\n", len(grid_master_parameters))
     logger.info(results)
 
 

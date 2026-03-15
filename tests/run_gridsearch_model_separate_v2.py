@@ -9,10 +9,14 @@ import scalogram_cnn_project.settings.config as config
 
 OVERLAP = 0.85
 CMAP = "gray"
-INPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap_{OVERLAP}"
-OUTPUT_FOLDER = "useless"
 CHANNELS = ["C3", "C4"]
+
+channel_string = "".join(CHANNELS)
+
 LOSO_SUBJECT = 1
+INPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap{OVERLAP}"
+OUTPUT_FOLDER = f"gridsearch_separate_v2_{channel_string}_{CMAP}_overlap{OVERLAP}_loso{LOSO_SUBJECT}"
+
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +42,7 @@ if __name__ == "__main__":
         "overlap": OVERLAP
     }
 
-    learning_rates = [1e-3, 5e-4, 3e-4, 1e-4, 5e-5, 3e-5, 1e-5]
+    learning_rates = [1e-3, 1e-4, 1e-5]
     batch_sizes = [16, 32, 64]
 
     grid_master_parameters = []
@@ -76,10 +80,10 @@ if __name__ == "__main__":
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    logger.info(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
+    logger.info("Elapsed time: %s seconds\n\n", elapsed_time)
 
 
-    logger.info(f"Total combinations: {len(grid_master_parameters)}\n\n")
+    logger.info("Total combinations: %s\n\n", len(grid_master_parameters))
     logger.info(results)
 
 

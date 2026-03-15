@@ -1,6 +1,6 @@
 
 import numpy as np
-from imblearn.under_sampling import RandomUnderSampler
+from scalogram_cnn_project.utils.balance_indices_undersampling import balanced_indices_undersmp
 
 import logging
 logger = logging.getLogger(__name__)
@@ -20,10 +20,7 @@ def train_test_split(X,
     y_train = y[ train_indexes, ...]
     y_test  = y[ test_indexes , ...]
 
-    rus = RandomUnderSampler(random_state=random_state)
-
-    rus.fit_resample(np.zeros(len(y_train)).reshape(-1,1), y_train)
-    indices = rus.sample_indices_
+    indices = balanced_indices_undersmp(y_train, random_state)
     x_train = x_train[indices]
     y_train = y_train[indices]
 

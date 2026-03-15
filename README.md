@@ -50,18 +50,12 @@ The script generates just the first scalogram according to the arguments passed 
 
 It runs a model that does not differentiate between scalograms from different channels during training and testing, mixing them in the process.
 
-**Versions**
-
-### v0
-It is prepared to receive scalograms from a selected set of channels, using a color map to the user's choice. It suffers from data leakage, due to the the overlap between the epochs considered.
-
----
-
 ## model_runner_separate
 
 **Description**
 
 It runs a model that, in order to deal with multichannel information, increases the input depth for receiving more color channels at a time.
+
 
 **Versions**
 

@@ -39,6 +39,10 @@ def load_data(folder="GeneratedScalograms",
         subject_part = splitted_filename[1]
         subject = subject_part.replace("subject", "")
 
+        epoch_part = splitted_filename[4]
+        epoch = epoch_part.replace("epoch", "").replace(".png", "")
+
+
         # Extract channel
         for ch in channels:
             if f"channel{ch}" in file:
@@ -52,7 +56,7 @@ def load_data(folder="GeneratedScalograms",
 
         grouped[sample_id][channel] = file  # dict inside dict
         labels[sample_id] = label
-        metadata[sample_id] = {"subject": int(subject)}
+        metadata[sample_id] = {"subject": int(subject), "epoch": int(epoch) }
 
     # -------------------------
     # Build X, Y and Subject_list
@@ -60,6 +64,7 @@ def load_data(folder="GeneratedScalograms",
     X_list = []
     Y_list = []
     Subject_list = []
+    Epoch_list = []
 
     for sample_id in grouped:
 
@@ -91,23 +96,34 @@ def load_data(folder="GeneratedScalograms",
             X_list.append(stacked)
             Y_list.append(labels[sample_id])
             Subject_list.append(metadata[sample_id]["subject"])
+            Epoch_list.append(metadata[sample_id]["epoch"])
 
     X = np.stack(X_list)
     Y = np.array(Y_list)
     Y = Y[:, np.newaxis]
     Subject_array= np.array(Subject_list)
     Subject_array = Subject_array[:, np.newaxis]
+    Epoch_array = np.array(Epoch_list)
+    Epoch_array = Epoch_array[:, np.newaxis]
 
-    logger.info("Final dataset shape: %s", X.shape)
+
+    logger.info("Dataset shape: %s", X.shape)
     logger.info("Labels shape: %s", Y.shape)
+    logger.debug("Subject_array: %s", Subject_array)
+    logger.debug("Epoch_array: %s", Epoch_array)
 
-    return X, Y, Subject_array
+    return X, Y, Subject_array, Epoch_array
 
 
 
 
 if __name__ == "__main__":
 
-    load_data(folder=config.DATA_DIR / "generated_scalograms_gray_overlap_0.85",
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(levelname)s:%(name)s:%(message)s"
+    )
+
+    load_data(folder=config.DATA_DIR / "generated_scalograms_C3C4_gray_overlap_0.85",
               channels=["C3", "C4"],
               cmap="gray")

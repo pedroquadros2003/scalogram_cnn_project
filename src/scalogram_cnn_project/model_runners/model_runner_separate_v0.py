@@ -1,10 +1,10 @@
 import tensorflow as tf
 from tensorflow.math import sigmoid
 from tensorflow import keras
-from scalogram_cnn_project.models.model_separate_v0 import create_model
+from scalogram_cnn_project.models.model_separate import create_model
 
 from sklearn.model_selection import train_test_split
-from imblearn.under_sampling import RandomUnderSampler
+from scalogram_cnn_project.utils.balance_indices_undersampling import balanced_indices_undersmp
 
 import numpy as np
 import matplotlib
@@ -34,16 +34,12 @@ def run_model(master_parameters, input_folder, output_folder):
     tf.config.experimental.enable_op_determinism()
 
 
-    (X, y) = load_data(folder=input_folder,
+    X, y, _, _ = load_data(folder=input_folder,
                        channels=master_channels,
                        cmap=master_cmap)
 
-    rus = RandomUnderSampler(random_state=master_seed)
 
-    rus.fit_resample(np.zeros(len(y)).reshape(-1,1), y)
-
-    indices = rus.sample_indices_
-
+    indices = balanced_indices_undersmp(y, master_seed)
     X = X[indices]
     y = y[indices]
 

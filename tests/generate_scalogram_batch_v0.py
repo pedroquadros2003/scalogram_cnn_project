@@ -11,20 +11,26 @@ logger = logging.getLogger(__name__)
 SEED = 42
 OVERLAP = 0.85
 CMAP = "gray" # gray 1 channel or viridis 3 channels RGB
-OUTPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap_{OVERLAP}"
+SUBJECTS = range(1,15)
+SESSIONS = range(1, 4)
+CHANNELS = ["C3", "C4"] # +  ["Fz", "Cz", "Pz"]
+
+channel_string = "".join(CHANNELS)
+
+OUTPUT_FOLDER = f"generated_scalograms_{channel_string}_{CMAP}_overlap{OVERLAP}"
+
+
 
 if __name__ == "__main__": 
     drowsiness_threshold = 4
 
-    subjects = range(1,15)
-    sessions = range(1, 4)
-    channels = ["C3", "C4"] # +  ["Fz", "Cz", "Pz"]
+
 
     start_time = time.perf_counter()
     
-    for subject in subjects:
-        for session in sessions:
-            for channel in channels:
+    for subject in SUBJECTS:
+        for session in SESSIONS:
+            for channel in CHANNELS:
                 
                 logger.info(f"Starting {subject}-{session} channel {channel}")
                 if config.drozy_valid_tests[subject][session]:
@@ -54,5 +60,5 @@ if __name__ == "__main__":
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
-    logger.info(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
+    logger.info("Elapsed time: %s seconds\n\n", elapsed_time)
     
