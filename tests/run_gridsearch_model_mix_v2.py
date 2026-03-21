@@ -3,7 +3,8 @@ from tensorflow import keras
 from pathlib import Path
 import numpy as np
 import itertools
-import time
+import gc
+import json
 from scalogram_cnn_project.model_runners.model_runner_mix_v2 import run_model
 import scalogram_cnn_project.settings.config as config
 
@@ -16,6 +17,7 @@ channel_string = "".join(CHANNELS)
 LOSO_SUBJECT = 1
 INPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap{OVERLAP}"
 OUTPUT_FOLDER = f"gridsearch_mix_v2_{channel_string}_{CMAP}_overlap{OVERLAP}_loso{LOSO_SUBJECT}"
+PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
 
 
 import logging
@@ -65,25 +67,58 @@ if __name__ == "__main__":
 
         grid_master_parameters.append(params)
 
+    # ==============================
+    # LOAD PREVIOUS PROGRESS
+    # ==============================
 
-    start_time = time.perf_counter()
+    results={}
+    PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-    results = []
+    if PROGRESS_FILE.exists():
+        with open(PROGRESS_FILE, "r") as f:
+            results = json.load(f)
+        logger.info("Resuming experiment. %s models already done.", len(results))
+    else:
+        results = {}
+
+    # ==============================
+    # GRID SEARCH LOOP
+    # ==============================
+
 
     for params in grid_master_parameters:
-        acc = run_model(master_parameters=params, 
-                        input_folder = config.DATA_DIR / INPUT_FOLDER,
-                        output_folder = config.OUTPUT_DIR / OUTPUT_FOLDER)
-        results.append((params["model_name"], acc))
+        
+        model_name = params["model_name"]
+
+        if model_name in results:
+            logger.info("Skipping %s (already completed)", model_name)
+            continue
+
+        logger.info("Running %s", model_name)
+
+        try:
+            acc = run_model(
+                master_parameters=params,
+                input_folder=config.DATA_DIR / INPUT_FOLDER,
+                output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
+            )
+        except Exception as e:
+            logger.error("Error in %s: %s", model_name, e)
+            acc = None
 
 
+        # SAVE PROGRESS IMMEDIATELY
+        results[model_name] = acc
 
-    end_time = time.perf_counter()
-    elapsed_time = end_time - start_time
-    logger.info("Elapsed time: %s seconds\n\n", elapsed_time)
+        with open(PROGRESS_FILE, "w") as f:
+            json.dump(results, f, indent=2)
+
+        # CLEAN MEMORY
+        tf.keras.backend.clear_session()
+        gc.collect()
 
 
-    logger.info("Total combinations: %s\n\n", len(grid_master_parameters))
-    logger.info(results)
+    logger.info("Final results: %s", results)
+
 
 

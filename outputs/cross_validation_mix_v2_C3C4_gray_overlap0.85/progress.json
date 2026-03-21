@@ -1,0 +1,11 @@
+{
+  "model_adam_lr0.001_bs32_loso1": 72.70341207349081,
+  "model_adam_lr0.001_bs32_loso2": 33.333333333333336,
+  "model_adam_lr0.001_bs32_loso3": 33.98950131233596,
+  "model_adam_lr0.001_bs32_loso4": 63.77952755905512,
+  "model_adam_lr0.001_bs32_loso5": 61.417322834645674,
+  "model_adam_lr0.001_bs32_loso6": 64.43569553805774,
+  "model_adam_lr0.001_bs32_loso8": 37.79527559055118,
+  "model_adam_lr0.001_bs32_loso11": 97.63779527559055,
+  "model_adam_lr0.001_bs32_loso14": 90.5511811023622
+}

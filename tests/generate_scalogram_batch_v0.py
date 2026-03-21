@@ -1,5 +1,4 @@
 import scalogram_cnn_project.settings.config as config
-import time
 from scalogram_cnn_project.scalogram_generation.generator_scalogram_batch_v0 import generate_scalogram
 
 import logging
@@ -9,15 +8,15 @@ logger = logging.getLogger(__name__)
 
 
 SEED = 42
-OVERLAP = 0.85
+OVERLAP = 0.733
 CMAP = "gray" # gray 1 channel or viridis 3 channels RGB
 SUBJECTS = range(1,15)
 SESSIONS = range(1, 4)
-CHANNELS = ["C3", "C4"] # +  ["Fz", "Cz", "Pz"]
+CHANNELS = ["C3", "C4", "Fz", "Cz", "Pz"]
 
 channel_string = "".join(CHANNELS)
 
-OUTPUT_FOLDER = f"generated_scalograms_{channel_string}_{CMAP}_overlap{OVERLAP}"
+OUTPUT_FOLDER = f"generated_scalograms_ALL_{CMAP}_overlap{OVERLAP}"
 
 
 
@@ -25,8 +24,6 @@ if __name__ == "__main__":
     drowsiness_threshold = 4
 
 
-
-    start_time = time.perf_counter()
     
     for subject in SUBJECTS:
         for session in SESSIONS:
@@ -53,12 +50,6 @@ if __name__ == "__main__":
                         dpi = 100,
                         final_width_px = 64,
                         final_height_px = 64,
-                        verbose = False
-                    )
+                        )
 
 
-    end_time = time.perf_counter()
-
-    elapsed_time = end_time - start_time
-    logger.info("Elapsed time: %s seconds\n\n", elapsed_time)
-    

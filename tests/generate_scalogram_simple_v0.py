@@ -1,5 +1,4 @@
 from scalogram_cnn_project.scalogram_generation.generator_scalogram_simple_v0 import generate_scalogram
-import time
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -9,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
 
-    start_time = time.perf_counter()
     # Run the generator
     generate_scalogram(subject=1,
                        session=1, 
@@ -30,8 +28,3 @@ if __name__ == "__main__":
                        final_width_px = 256,
                        final_height_px = 256,
                        )
-    
-    end_time = time.perf_counter()
-
-    elapsed_time = end_time - start_time
-    logger.info("Elapsed time: %s seconds", elapsed_time)

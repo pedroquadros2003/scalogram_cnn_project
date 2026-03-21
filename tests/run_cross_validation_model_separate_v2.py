@@ -2,18 +2,20 @@ import tensorflow as tf
 from tensorflow import keras
 from pathlib import Path
 import numpy as np
-import time
+import json
+import gc
 from scalogram_cnn_project.model_runners.model_runner_separate_v2 import run_model
 import scalogram_cnn_project.settings.config as config
 
 OVERLAP = 0.85
 CMAP = "gray"
-CHANNELS = ["C3", "C4"]
+CHANNELS = ["C3", "C4", "Fz", "Cz", "Pz"]
 
 channel_string = "".join(CHANNELS)
 
 INPUT_FOLDER = f"generated_scalograms_C3C4_{CMAP}_overlap{OVERLAP}"
-OUTPUT_FOLDER = f"cross_validation_v2_{channel_string}_{CMAP}_overlap{OVERLAP}"
+OUTPUT_FOLDER = f"cross_validation_separate_v2_{channel_string}_{CMAP}_overlap{OVERLAP}"
+PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
 
 LOSO_SUBJECTS = [1, 2, 3, 4, 5, 6, 8, 11, 14]
 LEARNING_RATE = 1e-3
@@ -29,11 +31,11 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
 
-    optimizers = [
-    ("adam", keras.optimizers.Adam),
-    ("sgd", keras.optimizers.SGD),
-    ("rmsprop", keras.optimizers.RMSprop)
-    ]
+    optimizers = {
+    "adam": keras.optimizers.Adam,
+    "sgd": keras.optimizers.SGD,
+    "rmsprop": keras.optimizers.RMSprop,
+    }
 
     fixed_params = {
         "cmap": CMAP,
@@ -45,7 +47,6 @@ if __name__ == "__main__":
         "learning_rate": LEARNING_RATE,
         "batch_size": BATCH_SIZE,
         "optimizer_name": OPTIMIZER,
-        "optimizer": optimizers[OPTIMIZER](learning_rate=LEARNING_RATE)
     }
 
 
@@ -59,31 +60,75 @@ if __name__ == "__main__":
         params.update({
             "loso_subject": subject,
             "model_name": f"model_{OPTIMIZER}_lr{LEARNING_RATE}_bs{BATCH_SIZE}_loso{subject}",
+            "optimizer": optimizers[OPTIMIZER](learning_rate=LEARNING_RATE),
         })
 
         grid_master_parameters.append(params)
 
 
-    start_time = time.perf_counter()
+    # ==============================
+    # LOAD PROGRESS
+    # ==============================
+    PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    
+    results = {}
+    if PROGRESS_FILE.exists():
+        with open(PROGRESS_FILE, "r") as f:
+            results = json.load(f)
+        logger.info("Resuming. %d subjects already done.", len(results))
+    else:
+        results = {}
 
-    results = []
+
+    # ==============================
+    # LOOP
+    # ==============================
+
 
     for params in grid_master_parameters:
-        acc = run_model(master_parameters=params, 
-                        input_folder = config.DATA_DIR / INPUT_FOLDER,
-                        output_folder = config.OUTPUT_DIR / OUTPUT_FOLDER)
-        results.append((params["model_name"], acc))
+
+        model_name = params["model_name"]
+
+        if model_name in results:
+            logger.info("Skipping %s (already done)", model_name)
+            continue
+
+        logger.info("Running %s", model_name)
+
+        try:
+            acc = run_model(
+                master_parameters=params,
+                input_folder=config.DATA_DIR / INPUT_FOLDER,
+                output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
+            )
+        except Exception as e:
+            logger.error("Error in %s: %s", model_name, e)
+            acc = None
+            
+        # SAVE PROGRESS
+        results[model_name] = acc
+
+        with open(PROGRESS_FILE, "w") as f:
+            json.dump(results, f, indent=2)
+
+
+        # CLEAN MEMORY
+        tf.keras.backend.clear_session()
+        gc.collect()
 
 
 
-    end_time = time.perf_counter()
-    elapsed_time = end_time - start_time
-    logger.info(f"Elapsed time: {elapsed_time:.4f} seconds\n\n")
+    # ==============================
+    # FINAL STATS
+    # ==============================
 
+    valid_results = [v for v in results.values() if v is not None]
 
+    if valid_results:
+        mean = sum(valid_results) / len(valid_results)
+    else:
+        mean = None
 
-    logger.info("Results of each LOSO: %s\n\n", results)
-    mean = sum(row[1] for row in results) / len(results)
-    logger.info("The mean accuracy is: %s", mean)
-
+    logger.info("Final results: %s", results)
+    logger.info("Mean accuracy: %s", mean)
 
