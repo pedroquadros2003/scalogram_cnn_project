@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow.math import sigmoid
 from tensorflow import keras
-from scalogram_cnn_project.models.model_separate import create_model
 
 from sklearn.model_selection import train_test_split
 from scalogram_cnn_project.utils.balance_indices_undersampling import balanced_indices_undersmp
@@ -18,28 +17,28 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def run_model(master_parameters, input_folder, output_folder):
+def run_model(training_parameters, model, callback, input_folder, output_folder):
 
-    master_cmap = master_parameters["cmap"]
-    master_channels = master_parameters["channels"]
-    master_model_name = master_parameters["model_name"]
-    master_seed = master_parameters["seed"]
-    master_batch_size = master_parameters["batch_size"]
+    training_cmap = training_parameters["cmap"]
+    training_channels = training_parameters["channels"]
+    training_model_name = training_parameters["model_name"]
+    training_seed = training_parameters["seed"]
+    training_batch_size = training_parameters["batch_size"]
 
 
-    os.environ["PYTHONHASHSEED"] = str(master_seed)
+    os.environ["PYTHONHASHSEED"] = str(training_seed)
     os.environ["TF_DETERMINISTIC_OPS"] = "1"
-    np.random.seed(master_seed)
-    tf.random.set_seed(master_seed)
+    np.random.seed(training_seed)
+    tf.random.set_seed(training_seed)
     tf.config.experimental.enable_op_determinism()
 
 
     X, y, _, _ = load_data(folder=input_folder,
-                       channels=master_channels,
-                       cmap=master_cmap)
+                       channels=training_channels,
+                       cmap=training_cmap)
 
 
-    indices = balanced_indices_undersmp(y, master_seed)
+    indices = balanced_indices_undersmp(y, training_seed)
     X = X[indices]
     y = y[indices]
 
@@ -47,14 +46,12 @@ def run_model(master_parameters, input_folder, output_folder):
     x_train, x_test, y_train, y_test = train_test_split(
         X, y,
         test_size=0.30,
-        random_state=master_seed
+        random_state=training_seed
     )
-
-    model, callback = create_model(master_parameters)
 
     history = model.fit(x = x_train, y = y_train,
                         epochs=50,
-                        batch_size=master_batch_size, 
+                        batch_size=training_batch_size, 
                         validation_data=(x_test, y_test),
                         callbacks=[callback],
                         )
@@ -86,7 +83,7 @@ def run_model(master_parameters, input_folder, output_folder):
         plt.ylabel(title)
         plt.xlabel("Epoch")
         plt.legend(["Train", "Validation"])
-        plt.savefig(output_folder / f"{master_model_name}_{title}.png")
+        plt.savefig(output_folder / f"{training_model_name}_{title}.png")
         plt.close()
 
 

@@ -7,6 +7,8 @@ import gc
 import json
 from scalogram_cnn_project.model_runners.model_runner_separate_v0 import run_model
 import scalogram_cnn_project.settings.config as config
+from scalogram_cnn_project.models.model_separate import create_model
+
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     learning_rates = [1e-3, 5e-4, 3e-4, 1e-4, 5e-5, 3e-5, 1e-5]
     batch_sizes = [16, 32, 64]
 
-    grid_master_parameters = []
+    grid_training_parameters = []
 
     for lr, bs, (opt_name, opt_class) in itertools.product(
         learning_rates,
@@ -61,7 +63,7 @@ if __name__ == "__main__":
             "optimizer": opt_class(learning_rate=lr)
         })
 
-        grid_master_parameters.append(params)
+        grid_training_parameters.append(params)
 
 
     # ==============================
@@ -82,7 +84,7 @@ if __name__ == "__main__":
     # GRID SEARCH LOOP
     # ==============================
 
-    for params in grid_master_parameters:
+    for params in grid_training_parameters:
         
         model_name = params["model_name"]
 
@@ -93,8 +95,10 @@ if __name__ == "__main__":
         logger.info("Running %s", model_name)
 
         try:
+            model, callback = create_model(params)
+
             acc = run_model(
-                master_parameters=params,
+                training_parameters=params,
                 input_folder=config.DATA_DIR / INPUT_FOLDER,
                 output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
             )

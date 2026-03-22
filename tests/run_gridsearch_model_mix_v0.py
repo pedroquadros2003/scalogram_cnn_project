@@ -6,6 +6,8 @@ import json
 import gc
 from scalogram_cnn_project.model_runners.model_runner_mix_v0 import run_model
 import scalogram_cnn_project.settings.config as config
+from scalogram_cnn_project.models.model_mix import create_model
+
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -96,8 +98,12 @@ if __name__ == "__main__":
         logger.info("Running %s", model_name)
 
         try:
+            model, callback = create_model(params)
+
             acc = run_model(
-                master_parameters=params,
+                model=model, 
+                callback=callback,
+                training_parameters=params,
                 input_folder=config.DATA_DIR / INPUT_FOLDER,
                 output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
             )
@@ -119,5 +125,3 @@ if __name__ == "__main__":
 
 
     logger.info("Final results: %s", results)
-
-
