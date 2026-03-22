@@ -108,7 +108,7 @@ if __name__ == "__main__":
         format="%(levelname)s:%(name)s:%(message)s"
     )
 
-    X, Y, Subject_array, Epoch_array =load_data(folder=config.DATA_DIR / "generated_scalograms_C3C4_gray_overlap_0.85",
+    X, Y, Subject_array, Epoch_array = load_data(folder=config.DATA_DIR / "generated_scalograms_C3C4_gray_overlap_0.85",
                                                 channels=["C3", "C4"],
                                                 cmap="gray")
 
