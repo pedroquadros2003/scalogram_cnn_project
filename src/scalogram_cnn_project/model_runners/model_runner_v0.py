@@ -1,7 +1,4 @@
 import tensorflow as tf
-from tensorflow.math import sigmoid
-from tensorflow import keras
-
 from sklearn.model_selection import train_test_split
 from scalogram_cnn_project.utils.balance_indices_undersampling import balanced_indices_undersmp
 
@@ -67,7 +64,7 @@ def run_model(training_parameters, model, callback, input_folder, output_folder)
                         )
 
 
-    predictions = sigmoid( model.predict(x_test) ).numpy()
+    predictions = tf.math.sigmoid( model.predict(x_test) ).numpy()
 
     error_classification = []
 

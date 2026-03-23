@@ -42,20 +42,27 @@ The script generates just the first scalogram according to the arguments passed 
 
 ---
 
+
+# Models
+
+**Description**
+
+Models are function that create model and callback objects.
+
+**Versions**
+
+### v0
+It is a model with fixed hyperparameters; its architecture matches the description of two-layered CNN-2D as described by A. Zayed (2025).
+
+### v1
+It is a model with variable hyperparameters; its architecture is a variation of the one proposed by A. Zayed (2025), as it allows the user to utilize one extra convolutional layers, as well as adjust the number of filters in each layer, the kernel size etc.
+
+
 # Model Runners
 
-## model_runner_mix
-
 **Description**
 
-It runs a model that does not differentiate between scalograms from different channels during training and testing, mixing them in the process.
-
-## model_runner_separate
-
-**Description**
-
-It runs a model that, in order to deal with multichannel information, increases the input depth for receiving more color channels at a time.
-
+A model runner loads data from memory and, with a model that it receives as parameter, runs a training/validation session. For the model runners, there are two options for dealing with data: separate and mix. The first one differentiate between channels, i.e., its input are the stack of color maps of diffente channels given a specific epoch. On the other hand, the "mix" option presupposes that all scalograms come from the same channel (which can suprisingly yield good results).
 
 **Versions**
 

@@ -15,8 +15,7 @@ This approach is common in scientific machine learning where:
 - Domain knowledge is injected through engineered features
 """
 
-from tensorflow import keras
-from tensorflow.keras.layers import (
+from keras.layers import (
     Input,
     Conv2D,
     BatchNormalization,
@@ -26,7 +25,7 @@ from tensorflow.keras.layers import (
     Dense,
     Concatenate
 )
-from tensorflow.keras.models import Model
+from keras.models import Model
 
 # ------------------------------------------------------------------
 # Hyperparameters (example values)

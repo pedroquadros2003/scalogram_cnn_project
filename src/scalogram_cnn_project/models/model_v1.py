@@ -12,19 +12,24 @@ from keras.layers import Input
 from keras.layers import BatchNormalization
 from scalogram_cnn_project.utils.validate_dict_params  import validate_dict_params
 
-
 from pathlib import Path
 import numpy as np
 
 import logging
 logger = logging.getLogger(__name__)
 
+
+
 def create_model(parameters):
 
     REQUIRED_TRAIN_KEYS = ["channels", "seed", "epsilon", "momentum", "optimizer", "cmap", "mode"]
+    REQUIRED_MODEL_KEYS = ["kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
+                           "first_layer_num_filters", "second_layer_num_filters"]
+
 
     logger.info("Validating training parameters...")
     validate_dict_params(parameters, REQUIRED_TRAIN_KEYS)
+
 
     channels = parameters["channels"]
     seed = parameters["seed"]
@@ -33,7 +38,23 @@ def create_model(parameters):
     optimizer = parameters["optimizer"]
     cmap = parameters["cmap"]
     mode = parameters["mode"]
-    
+
+
+
+    logger.info("Validating model parameters...")
+    validate_dict_params(parameters, REQUIRED_MODEL_KEYS)
+
+
+    kernel_size = params["kernel_size"]
+    extra_layer = parameters["extra_layer"]
+    extra_layer_num_filters = params["extra_layer_num_filters"]
+    num_neurons_dense = params["num_neurons_dense"]
+    first_layer_num_filters = params["first_layer_num_filters"]
+    second_layer_num_filters = params["second_layer_num_filters"]
+
+
+
+
     color_channels_per_image = 3
 
     if cmap == "gray":
@@ -59,7 +80,7 @@ def create_model(parameters):
 
     model = Sequential()
     model.add( Input(shape=(64,64,color_channels_per_image*mode_multiplier)) ),
-    model.add(Conv2D(64, (3,3), activation='relu')),
+    model.add(Conv2D(first_layer_num_filters, (kernel_size,kernel_size), activation='relu')),
     model.add(BatchNormalization(
                                 momentum=momentum,
                                 epsilon=epsilon,
@@ -71,23 +92,41 @@ def create_model(parameters):
                                 moving_variance_initializer="ones",
                                 )),
     model.add(MaxPooling2D(2,2)),
-    model.add(Dropout(0.25, seed = seed)),
-    model.add(Conv2D(32, (3,3), activation='relu')),
-    model.add(BatchNormalization(
-                                momentum=momentum,
-                                epsilon=epsilon,
-                                center=True,
-                                scale=True,
-                                beta_initializer="zeros",
-                                gamma_initializer="ones",
-                                moving_mean_initializer="zeros",
-                                moving_variance_initializer="ones",
-                                )),
-    model.add(MaxPooling2D(2,2)),
-    model.add(Dropout(0.25, seed = seed)),
-    model.add(Flatten()),
-    model.add(Dense(128, activation='relu')),
     model.add(Dropout(0.5, seed = seed)),
+    model.add(Conv2D(second_layer_num_filters, (kernel_size,kernel_size), activation='relu')),
+    model.add(BatchNormalization(
+                                momentum=momentum,
+                                epsilon=epsilon,
+                                center=True,
+                                scale=True,
+                                beta_initializer="zeros",
+                                gamma_initializer="ones",
+                                moving_mean_initializer="zeros",
+                                moving_variance_initializer="ones",
+                                )),
+    model.add(MaxPooling2D(2,2)),
+    model.add(Dropout(0.5, seed = seed)),
+    
+    if extra_layer:
+    
+        model.add(Conv2D(extra_layer_num_filters, (kernel_size,kernel_size), activation='relu')),
+        model.add(BatchNormalization(
+                                    momentum=momentum,
+                                    epsilon=epsilon,
+                                    center=True,
+                                    scale=True,
+                                    beta_initializer="zeros",
+                                    gamma_initializer="ones",
+                                    moving_mean_initializer="zeros",
+                                    moving_variance_initializer="ones",
+                                    )),
+        model.add(MaxPooling2D(2,2)),
+        model.add(Dropout(0.5, seed = seed)),
+    
+
+    model.add(Flatten()),
+    model.add(Dense(num_neurons_dense, activation='relu')),
+    model.add(Dropout(0.7, seed = seed)),
     model.add(Dense(1))
 
 
@@ -112,6 +151,8 @@ def create_model(parameters):
     return model, callback
 
 
+
+
 if __name__ == "__main__":
     from keras.optimizers import Adam
 
@@ -124,7 +165,15 @@ if __name__ == "__main__":
     params["optimizer"] = Adam(learning_rate = 0.001)
     params["cmap"] = "gray"
     params["mode"] = "mix"
-    
+
+
+    params["extra_layer"] = True
+    params["extra_layer_num_filters"] = 16
+    params["first_layer_num_filters"] = 64
+    params["second_layer_num_filters"] = 64
+    params["kernel_size"] = 2
+    params["num_neurons_dense"] = 128
+     
 
     model, callback = create_model(params)
     model.summary()

@@ -3,7 +3,7 @@
 ############################################################################
 
 import tensorflow as tf 
-from tensorflow import keras
+from keras.optimizers import Adam, SGD, RMSprop
 import numpy as np
 import itertools
 import json
@@ -30,9 +30,9 @@ MODEL_RUNNERS = {
 }
 
 OPTIMIZERS = [
-    ("adam", keras.optimizers.Adam),
-    #("sgd" , keras.optimizers.SGD),
-    #("rmsprop", keras.optimizers.RMSprop),
+    ("adam", Adam),
+    #("sgd" , SGD),
+    #("rmsprop", RMSprop),
 ]
 
 ############################################################################
