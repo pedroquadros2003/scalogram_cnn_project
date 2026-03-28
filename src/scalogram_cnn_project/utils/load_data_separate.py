@@ -10,120 +10,202 @@ from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
-def load_data(folder="GeneratedScalograms",
+def load_data(folder_path="GeneratedScalograms",
               channels=["C3", "C4"],
-              cmap="viridis"):
+              cmap="viridis",
+              subjects=range(1, 15),
+              additional_features=False):
+
 
     # -------------------------
-    # Read file list
+    # READ FILE LIST
     # -------------------------
-    all_files = list_files(folder)
+    all_files = list_files(folder_path)
 
     grouped = defaultdict(dict)
     labels = {}
     metadata = {}
 
     # -------------------------
-    # Parse file names
+    # LOAD FEATURES IF NEEDED
+    # -------------------------
+    if additional_features:
+        features_array = np.load(folder_path / "data.npy")
+        # shape: (subject, session, channel, epoch, features)
+
+        # Channel mapping (must match generator)
+        channel_map = {ch: i + 1 for i, ch in enumerate(channels)}
+
+    # -------------------------
+    # PARSE FILENAMES
     # -------------------------
     for file in all_files:
+
+
+        # Check if file belongs to selected channels
+        if not any(f"channel{ch}" in file for ch in channels):
+            continue
+
+        # Check if file belongs to selected subjects
+        if not any(f"subject{sub}" in file for sub in subjects):
+            continue
+
+        # Ensure file is an image
+        if not (".jpg" in file or ".png" in file):
+            continue
+
         
-        ## drownsinessLevel0_subject1_session1_channelC3_epoch0.png
-        splitted_filename = file.split("_")
+        splitted = file.split("_")
 
-        # Extract label
-        label_part = splitted_filename[0]
-        label = int(label_part.replace("drownsinessLevel", ""))
+        # Example:
+        # drownsinessLevel0_subject1_session1_channelC3_epoch0.png
 
-        # Extract metadata
-        subject_part = splitted_filename[1]
-        subject = subject_part.replace("subject", "")
-
-        epoch_part = splitted_filename[4]
-        epoch = epoch_part.replace("epoch", "").replace(".png", "")
-
+        label   = int(splitted[0].replace("drownsinessLevel", ""))
+        subject = int(splitted[1].replace("subject", ""))
+        session = int(splitted[2].replace("session", ""))
+        epoch   = int(splitted[4].replace("epoch", "").replace(".png", ""))
 
         # Extract channel
+        channel = None
         for ch in channels:
             if f"channel{ch}" in file:
                 channel = ch
                 break
-        else:
-            continue  # skip if channel not found
 
-        # Build sample_id (remove channel part)
+        if channel is None:
+            continue
+
+        # Build sample_id (same sample across channels)
         sample_id = file.replace(f"_channel{channel}", "")
 
-        grouped[sample_id][channel] = file  # dict inside dict
+        grouped[sample_id][channel] = file
         labels[sample_id] = label
-        metadata[sample_id] = {"subject": int(subject), "epoch": int(epoch) }
+        metadata[sample_id] = {
+            "subject": subject,
+            "session": session,
+            "epoch": epoch
+        }
 
     # -------------------------
-    # Build X, Y and Subject_list
+    # BUILD DATASET
     # -------------------------
     X_list = []
     Y_list = []
     Subject_list = []
     Epoch_list = []
+    Extra_features_list = []
 
     for sample_id in grouped:
 
         imgs = []
+        extra_feats_per_sample = []
 
         for ch in channels:
 
             if ch not in grouped[sample_id]:
-                break  # skip incomplete samples
+                break  # skip incomplete sample
 
-            full_path = os.path.join(folder, grouped[sample_id][ch])
+            file = grouped[sample_id][ch]
+            full_path = os.path.join(folder_path, file)
 
             if not os.path.exists(full_path):
                 break
-            
-            if cmap=="viridis":
+
+            # -------------------------
+            # LOAD IMAGE
+            # -------------------------
+            if cmap == "viridis":
                 img = cv2.imread(full_path)
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            elif cmap=="gray":
+            else:
                 img = cv2.imread(full_path, cv2.IMREAD_GRAYSCALE)
                 img = img[..., np.newaxis]
-            
-            img = img / 255.0
 
+            img = img / 255.0
             imgs.append(img)
 
+            # -------------------------
+            # LOAD FEATURES PER CHANNEL
+            # -------------------------
+            if additional_features:
+                subject = metadata[sample_id]["subject"]
+                session = metadata[sample_id]["session"]
+                epoch = metadata[sample_id]["epoch"]
+
+                if ch not in channel_map:
+                    raise ValueError(f"Channel {ch} not found in channel_map")
+
+                ch_idx = channel_map[ch]
+
+                feat = features_array[
+                    subject,
+                    session,
+                    ch_idx,
+                    epoch
+                ]
+
+                extra_feats_per_sample.append(feat)
+
+        # Only keep complete samples
         if len(imgs) == len(channels):
+
+            # Stack images along channel dimension
             stacked = np.concatenate(imgs, axis=-1)
             X_list.append(stacked)
+
             Y_list.append(labels[sample_id])
             Subject_list.append(metadata[sample_id]["subject"])
             Epoch_list.append(metadata[sample_id]["epoch"])
 
+            # Combine features from all channels
+            if additional_features:
+                combined_feat = np.concatenate(extra_feats_per_sample, axis=0)
+                Extra_features_list.append(combined_feat)
+
+    # -------------------------
+    # FINAL FORMATTING
+    # -------------------------
     X = np.stack(X_list)
-    Y = np.array(Y_list)
-    Y = Y[:, np.newaxis]
-    Subject_array= np.array(Subject_list)
-    Subject_array = Subject_array[:, np.newaxis]
+    Y = np.array(Y_list)[:, np.newaxis]
+    Subject_array = np.array(Subject_list)
     Epoch_array = np.array(Epoch_list)
-    Epoch_array = Epoch_array[:, np.newaxis]
 
+    if additional_features:
+        X_extra = np.array(Extra_features_list)
 
-    logger.info("Dataset shape: %s", X.shape)
+        # Multi-input format for Keras
+        X = [X, X_extra]
+
+        logger.info("Image tensor shape: %s", X[0].shape)
+        logger.info("Extra features shape: %s", X[1].shape)
+        logger.info("Labels shape: %s", Y.shape)
+
+        return X, Y, Subject_array, Epoch_array
+
+    logger.info("Image tensor shape: %s", X.shape)
     logger.info("Labels shape: %s", Y.shape)
-    logger.debug("Subject_array: %s", Subject_array)
-    logger.debug("Epoch_array: %s", Epoch_array)
 
     return X, Y, Subject_array, Epoch_array
 
 
 
-
 if __name__ == "__main__":
+
+    import scalogram_cnn_project.settings.config as config
+    from scalogram_cnn_project.utils.train_test_splitter_in_time import train_test_split
 
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(levelname)s:%(name)s:%(message)s"
     )
 
-    load_data(folder=config.DATA_DIR / "generated_scalograms_C3C4_gray_overlap_0.85",
-              channels=["C3", "C4"],
-              cmap="gray")
+    X, Y, Subject_array, Epoch_array = load_data(folder_path=config.DATA_DIR / "generated_scalograms_ALL_gray_overlap0.733_s1",
+                                                channels=["C3", "C4"],
+                                                cmap="gray",
+                                                additional_features=True)
+    
+
+    train_test_split(X, Y, test_size=0.30, random_state=42,\
+                overlap=0.85, subject_array=Subject_array,\
+                epoch_array=Epoch_array, 
+                neglected_epochs_step = 2) ## It is equal to the number of channels in the mixed model

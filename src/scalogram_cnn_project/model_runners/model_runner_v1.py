@@ -18,38 +18,46 @@ loaders = {
 import logging
 logger = logging.getLogger(__name__)
 
-def run_model(training_parameters, model, callback, input_folder, output_folder):
+def run_model(parameters, model, callback, input_folder, output_folder):
 
-    training_cmap = training_parameters["cmap"]
-    training_channels = training_parameters["channels"]
-    training_model_name = training_parameters["model_name"]
-    training_seed = training_parameters["seed"]
-    training_batch_size = training_parameters["batch_size"]
-    training_overlap = training_parameters["overlap"]
-    training_mode = training_parameters["mode"]
+    cmap = parameters["cmap"]
+    channels = parameters["channels"]
+    model_name = parameters["model_name"]
+    seed = parameters["seed"]
+    batch_size = parameters["batch_size"]
+    overlap = parameters["overlap"]
+    mode = parameters["mode"]
+    subjects = parameters["subjects"]
 
-    os.environ["PYTHONHASHSEED"] = str(training_seed)
-    np.random.seed(training_seed)
-    tf.random.set_seed(training_seed)
+    additional_features = False
+    if "n_additional_features" in parameters:
+        additional_features = True
+
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
     #os.environ["TF_DETERMINISTIC_OPS"] = "1"
     #tf.config.experimental.enable_op_determinism()
 
 
-    load_data = loaders[training_mode]
+    load_data = loaders[mode]
 
-    X, y, Subject_array, Epoch_array = load_data(folder=input_folder,
-                       channels=training_channels,
-                       cmap=training_cmap)
+    X, y, Subject_array, Epoch_array = load_data(folder_path=input_folder,
+                       channels=channels,
+                       cmap=cmap,
+                       subjects=subjects,
+                       additional_features=additional_features)
 
 
     ## As mix version of the model does not differentiate channels,
     ## it is necessary to have a greater step for neglected epochs
     ## in order to skip the right amount of epochs for every channel.
     neglected_epochs_step = 1 
-    if training_mode == "separate":
+    if mode == "separate":
         neglected_epochs_step = 1
-    elif training_mode == "mix":
-        neglected_epochs_step = len(training_channels)
+    elif mode == "mix":
+        neglected_epochs_step = len(channels)
     else:
        neglected_epochs_step = 1 
 
@@ -57,8 +65,8 @@ def run_model(training_parameters, model, callback, input_folder, output_folder)
     x_train, x_test, y_train, y_test = train_test_split(
         X, y,
         test_size=0.30,
-        random_state=training_seed,
-        overlap=training_overlap,
+        random_state=seed,
+        overlap=overlap,
         subject_array = Subject_array,
         epoch_array = Epoch_array,
         neglected_epochs_step = neglected_epochs_step
@@ -66,7 +74,7 @@ def run_model(training_parameters, model, callback, input_folder, output_folder)
 
     history = model.fit(x = x_train, y = y_train,
                         epochs=50,
-                        batch_size=training_batch_size, 
+                        batch_size=batch_size, 
                         validation_data=(x_test, y_test),
                         callbacks=[callback],
                         )
@@ -98,7 +106,7 @@ def run_model(training_parameters, model, callback, input_folder, output_folder)
         plt.ylabel(title)
         plt.xlabel("Epoch")
         plt.legend(["Train", "Validation"])
-        plt.savefig(output_folder / f"{training_model_name}_{title}.png")
+        plt.savefig(output_folder / f"{model_name}_{title}.png")
         plt.close()
 
 

@@ -1,5 +1,5 @@
 import scalogram_cnn_project.settings.config as config
-from scalogram_cnn_project.scalogram_generation.generator_scalogram_batch_v0 import generate_scalogram
+from scalogram_cnn_project.scalogram_generation.generator_scalogram_batch import generate_scalogram
 
 import logging
 logging.basicConfig(level=logging.INFO)

@@ -12,28 +12,27 @@ import scalogram_cnn_project.settings.config as config
 from scalogram_cnn_project.utils.dict_product import dict_product
 from scalogram_cnn_project.utils.dict_to_str import dict_to_str
 
-
 ############################################################################
 ## Model Creators, Model Runners and Optimizers
 ############################################################################
 
-from scalogram_cnn_project.models import model_v0
+from scalogram_cnn_project.models import model_v0, model_v1, model_v2
 MODEL_CREATORS = {
     "v0": model_v0.create_model,
+    "v1": model_v1.create_model,
+    "v2": model_v2.create_model,
 }
 
-from scalogram_cnn_project.model_runners import model_runner_v0, model_runner_v1, model_runner_v2
+from scalogram_cnn_project.model_runners import model_runner_v2
 MODEL_RUNNERS = {
-    #"v0": model_runner_v0.run_model,
-    #"v1": model_runner_v1.run_model,
     "v2": model_runner_v2.run_model,
 }
 
-OPTIMIZERS = [
-    ("adam", Adam),
-    #("sgd" , SGD),
-    #("rmsprop", RMSprop),
-]
+OPTIMIZERS = {
+    "adam": Adam,
+    "sgd": SGD,
+    "rmsprop": RMSprop,
+}
 
 ############################################################################
 ## Logging
@@ -43,7 +42,6 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("scalogram_cnn_project").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
-
 
 ############################################################################
 ## PARAMETERS
@@ -56,7 +54,7 @@ MODE = "separate"
 OVERLAP = 0.733
 CMAP = "gray"
 CHANNELS = ["C3", "C4", "Fz", "Cz", "Pz"]
-
+SUBJECTS = [1, 2, 3, 5, 6, 8, 13]
 
 INPUT_FOLDER = f"generated_scalograms_ALL_{CMAP}_overlap{OVERLAP}"
 OUTPUT_FOLDER = "useless"
@@ -66,19 +64,23 @@ PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
 ## GRID PARAMETERS
 ############################################################################
 
+MODEL_HYPER_PARAMS = {
+    "epsilon": [1e-3],
+    "momentum": [0.99],
+    "cmap": [CMAP],
+    "channels": [CHANNELS],
+    "mode": [MODE],
+}
+
 MODEL_TRAIN_PARAMS = {
     "learning_rate": [1e-3],
     "batch_size": [32],
+    "seed": [42],
+    "overlap": [OVERLAP],
+    "optimizer_name": ["adam"],
+    "subjects": [SUBJECTS],
+    "loso_subject": SUBJECTS
 }
-
-MODEL_HYPER_PARAMS = {
-    # empty for the time being (but ready to be used)
-}
-
-LOSO_PARAMS = {
-    "loso_subject": [1, 2, 3, 5, 6, 8]
-}
-
 
 ############################################################################
 ## MAIN
@@ -105,70 +107,55 @@ if __name__ == "__main__":
             results = json.load(f)
         logger.info("Resuming experiment. %d configs already done.", len(results))
 
+    # ====================================
+    # CREATING A GRID OF PARAMS
+    # ====================================
 
-    # ==============================
-    # BUILD GRID
-    # ==============================
-
-    fixed_params = {
-        "cmap": CMAP,
-        "channels": CHANNELS,
-        "seed": 42,
-        "epsilon": 1e-3,
-        "momentum": 0.99,
-        "overlap": OVERLAP,
-        "mode": MODE,
-    }
 
     train_configs = list(dict_product(MODEL_TRAIN_PARAMS))
     model_configs = list(dict_product(MODEL_HYPER_PARAMS))
-    loso_configs  = list(dict_product(LOSO_PARAMS))
 
     grid_params = []
 
-    for model_hp, train_hp, loso_hp, (opt_name, opt_class) in itertools.product(
+    for model_hp, train_hp in itertools.product(
         model_configs,
-        train_configs,
-        loso_configs,
-        OPTIMIZERS
+        train_configs
     ):
-        params = fixed_params.copy()
+        params = {}
 
-        # merge configs
+        # Model hyperparameters
         params.update(model_hp)
-        params.update(train_hp)
-        params.update(loso_hp)
 
-        # optimizer
+        # Training parameters
+        params.update(train_hp)
+
+        # Optimizer
+        opt_name = train_hp["optimizer_name"]
+        opt_class = OPTIMIZERS[opt_name]
+
         params.update({
-            "optimizer_name": opt_name,
             "optimizer": opt_class(learning_rate=train_hp["learning_rate"])
         })
 
-        # name
         model_str = dict_to_str(model_hp)
         train_str = dict_to_str(train_hp)
-        loso_str  = dict_to_str(loso_hp)
-
-        parts = [opt_name, train_str, model_str, loso_str]
+        parts = [train_str, model_str]
         params["model_name"] = "_".join(p for p in parts if p)
 
         grid_params.append(params)
 
 
-    logger.info("Total configs: %d", len(grid_params))
-
-
     # ==============================
-    # LOOP
+    # GRID SEARCH LOOP
     # ==============================
+
 
     for params in grid_params:
-
+        
         model_name = params["model_name"]
 
         if model_name in results:
-            logger.info("Skipping %s", model_name)
+            logger.info("Skipping %s (already completed)", model_name)
             continue
 
         logger.info("Running %s", model_name)
@@ -177,22 +164,24 @@ if __name__ == "__main__":
             model, callback = create_model(params)
 
             acc = run_model(
-                training_parameters=params,
-                model=model,
+                model=model, 
                 callback=callback,
+                parameters=params,
                 input_folder=config.DATA_DIR / INPUT_FOLDER,
                 output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
             )
-
         except Exception as e:
             logger.error("Error in %s: %s", model_name, e)
             acc = None
 
+
+        # SAVE PROGRESS IMMEDIATELY
         results[model_name] = acc
 
         with open(PROGRESS_FILE, "w") as f:
             json.dump(results, f, indent=2)
 
+        # CLEAN MEMORY
         tf.keras.backend.clear_session()
         gc.collect()
 

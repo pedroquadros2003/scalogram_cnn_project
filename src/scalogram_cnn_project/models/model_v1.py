@@ -22,35 +22,35 @@ logger = logging.getLogger(__name__)
 
 def create_model(parameters):
 
-    REQUIRED_TRAIN_KEYS = ["channels", "seed", "epsilon", "momentum", "optimizer", "cmap", "mode"]
-    REQUIRED_MODEL_KEYS = ["kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
-                           "first_layer_num_filters", "second_layer_num_filters"]
+    REQUIRED_TRAIN_KEYS = [ "seed", "optimizer"]
+    REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", \
+                            "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
+                            "first_layer_num_filters", "second_layer_num_filters", ]
+
 
 
     logger.info("Validating training parameters...")
     validate_dict_params(parameters, REQUIRED_TRAIN_KEYS)
 
 
-    channels = parameters["channels"]
     seed = parameters["seed"]
-    epsilon = parameters["epsilon"]
-    momentum = parameters["momentum"]
     optimizer = parameters["optimizer"]
-    cmap = parameters["cmap"]
-    mode = parameters["mode"]
-
 
 
     logger.info("Validating model parameters...")
     validate_dict_params(parameters, REQUIRED_MODEL_KEYS)
 
-
-    kernel_size = params["kernel_size"]
+    channels = parameters["channels"]
+    epsilon = parameters["epsilon"]
+    momentum = parameters["momentum"]
+    cmap = parameters["cmap"]
+    mode = parameters["mode"]
+    kernel_size = parameters["kernel_size"]
     extra_layer = parameters["extra_layer"]
-    extra_layer_num_filters = params["extra_layer_num_filters"]
-    num_neurons_dense = params["num_neurons_dense"]
-    first_layer_num_filters = params["first_layer_num_filters"]
-    second_layer_num_filters = params["second_layer_num_filters"]
+    extra_layer_num_filters = parameters["extra_layer_num_filters"]
+    num_neurons_dense = parameters["num_neurons_dense"]
+    first_layer_num_filters = parameters["first_layer_num_filters"]
+    second_layer_num_filters = parameters["second_layer_num_filters"]
 
 
 
@@ -177,3 +177,51 @@ if __name__ == "__main__":
 
     model, callback = create_model(params)
     model.summary()
+
+'''
+############ TO BE TESTED 1 ############
+
+    OPTIMIZER = "SGD"
+
+    MODEL = "v1"
+    
+    MODEL_RUNNER = "v1"
+
+    MODEL_HYPER_PARAMS = {
+        "extra_layer" : [False],
+        "extra_layer_num_filters": [16],
+        "first_layer_num_filters": [64],
+        "second_layer_num_filters": [64, 32],
+        "kernel_size": [2, 3],
+        "num_neurons_dense": [64, 96, 128]
+    }
+
+    MODEL_TRAIN_PARAMS = {
+        "learning_rate": [1e-4],
+        "batch_size": [32],
+    }
+
+
+############ TO BE TESTED 2 ############
+
+    OPTIMIZER = "SGD"
+
+    MODEL = "v1"
+    
+    MODEL_RUNNER = "v1"
+
+    MODEL_HYPER_PARAMS = {
+        "extra_layer" : [True],
+        "extra_layer_num_filters": [16, 32]
+        "first_layer_num_filters": [64],
+        "second_layer_num_filters": [64, 32],
+        "kernel_size": [2, 3],
+        "num_neurons_dense": [64, 96, 128]
+    }
+
+    MODEL_TRAIN_PARAMS = {
+        "learning_rate": [1e-4],
+        "batch_size": [32],
+    }
+
+'''

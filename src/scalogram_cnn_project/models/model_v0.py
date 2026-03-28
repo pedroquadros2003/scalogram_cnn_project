@@ -21,19 +21,28 @@ logger = logging.getLogger(__name__)
 
 def create_model(parameters):
 
-    REQUIRED_TRAIN_KEYS = ["channels", "seed", "epsilon", "momentum", "optimizer", "cmap", "mode"]
+    REQUIRED_TRAIN_KEYS = ["seed", "optimizer"]
+    REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode"]
+
 
     logger.info("Validating training parameters...")
     validate_dict_params(parameters, REQUIRED_TRAIN_KEYS)
 
-    channels = parameters["channels"]
     seed = parameters["seed"]
+    optimizer = parameters["optimizer"]
+    
+    
+    logger.info("Validating model parameters...")
+    validate_dict_params(parameters, REQUIRED_MODEL_KEYS)
+
+    channels = parameters["channels"]    
     epsilon = parameters["epsilon"]
     momentum = parameters["momentum"]
-    optimizer = parameters["optimizer"]
     cmap = parameters["cmap"]
     mode = parameters["mode"]
-    
+
+
+
     color_channels_per_image = 3
 
     if cmap == "gray":

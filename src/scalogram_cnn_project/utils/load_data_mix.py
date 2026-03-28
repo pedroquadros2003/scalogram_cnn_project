@@ -8,83 +8,138 @@ import scalogram_cnn_project.settings.config as config
 import logging
 logger = logging.getLogger(__name__)
 
-def load_data(folder = "GeneratedScalograms",
+def load_data(folder_path="GeneratedScalograms",
               channels=["C3", "C4"],
-              cmap="viridis"): 
+              cmap="viridis",
+              subjects = range(1,15),
+              additional_features=False
+              ):
 
     images = []
     Y = []
     Epoch_list = []
     Subject_list = []
+    Extra_features_list = []
 
+    # Get list of files
+    selected_files = list_files(folder_path)
 
-    # Read file list
-    selected_files = list_files(folder)
+    # Load feature array if needed
+    if additional_features:
+        
+        features_array = np.load(folder_path / "data.npy")
+        # Expected shape:
+        # (subject, session, channel, epoch, features)
 
+        # Create channel → index mapping (must match generator logic)
+        # +1 because index 0 is reserved as dummy channel
+        channel_map = {ch: i + 1 for i, ch in enumerate(channels)}
 
     for file in selected_files:
 
-        # Check if the scalogram comes from one of the selected channels 
-        include_file = False
-        for ch in channels:
-            if f"channel{ch}" in file:
-                include_file = True
-                break
-            else:
-                continue
 
-        # Skip file if it should not be included
-        if not include_file:
+        # Check if file belongs to selected channels
+        if not any(f"channel{ch}" in file for ch in channels):
             continue
-        
-        ## drownsinessLevel0_subject1_session1_channelC3_epoch0.png
-        splitted_filename = file.split("_")
 
-        # Extract metadata
-        subject_part = splitted_filename[1]
-        subject = subject_part.replace("subject", "")
-        Subject_list.append(int(subject))
+        # Check if file belongs to selected subjects
+        if not any(f"subject{sub}" in file for sub in subjects):
+            continue
 
-        epoch_part = splitted_filename[4]
-        epoch = epoch_part.replace("epoch", "").replace(".png", "")
-        Epoch_list.append(int(epoch))
+        # Ensure file is an image
+        if not (".jpg" in file or ".png" in file):
+            continue
 
-        full_path = os.path.join(folder, file)
+
+        splitted = file.split("_")
+
+        # -------------------------
+        # EXTRACT METADATA
+        # -------------------------
+        # Example filename:
+        # drownsinessLevel0_subject1_session1_channelC3_epoch0.png
+
+        subject = int(splitted[1].replace("subject", ""))
+        session = int(splitted[2].replace("session", ""))
+        channel_str = splitted[3].replace("channel", "")
+        epoch = int(splitted[4].replace("epoch", "").replace(".png", ""))
+
+        Subject_list.append(subject)
+        Epoch_list.append(epoch)
+
+        full_path = os.path.join(folder_path, file)
 
         if not os.path.exists(full_path):
-            logger.warning(f"Warning: {file} not found, skipping.")
+            logger.warning(f"{file} not found, skipping.")
             continue
 
-        if cmap=="viridis":
+        # -------------------------
+        # LOAD IMAGE
+        # -------------------------
+        if cmap == "viridis":
             img = cv2.imread(full_path)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        elif cmap=="gray":
+        else:
             img = cv2.imread(full_path, cv2.IMREAD_GRAYSCALE)
 
-
         images.append(img)
-        ## 16 is the exact position of the label (0 awake, 1 drowsy)
-        Y.append(int(file[16])) 
 
-    X = np.array(images)
-    X = X / 255.0
+        # -------------------------
+        # EXTRACT LABEL
+        # -------------------------
+        # Assumes label is encoded at fixed position in filename
+        Y.append(int(file[16]))
 
-    if cmap=="gray":
+        # -------------------------
+        # LOAD ADDITIONAL FEATURES
+        # -------------------------
+        if additional_features:
+
+            if channel_str not in channel_map:
+                raise ValueError(f"Channel {channel_str} not found in channel_map")
+
+            ch_idx = channel_map[channel_str]
+
+            # Extract feature vector aligned with this image
+            extra_feat = features_array[
+                subject,
+                session,
+                ch_idx,
+                epoch
+            ]
+
+            Extra_features_list.append(extra_feat)
+
+    # -------------------------
+    # FINAL FORMATTING
+    # -------------------------
+    X = np.array(images) / 255.0
+
+    if cmap == "gray":
         X = X[..., np.newaxis]
 
-    Y = np.array(Y)
-    Y = Y[:, np.newaxis]
+    Y = np.array(Y)[:, np.newaxis]
 
     Epoch_array = np.array(Epoch_list)
     Subject_array = np.array(Subject_list)
 
-    logger.debug("Subject_array: %s", Subject_array)
-    logger.debug("Epoch_array: %s", Epoch_array)
-    logger.info("Dataset shape: %s", X.shape)
-    logger.info("Labels shape: %s", Y.shape)
+    if additional_features:
+        X_extra = np.array(Extra_features_list)
 
-    return X, Y, Subject_array, Epoch_array
+        # Combine inputs into a list for Keras multi-input model
+        X = [X, X_extra]
 
+        logger.info("Image tensor shape: %s", X[0].shape)
+        logger.info("Extra features shape: %s", X[1].shape)
+        logger.info("Labels shape: %s", Y.shape)
+
+        return X, Y, Subject_array, Epoch_array
+    
+    else:
+        logger.info("Image tensor shape: %s", X.shape)
+        logger.info("Labels shape: %s", Y.shape)
+
+        return X, Y, Subject_array, Epoch_array
 
 
 if __name__ == "__main__":
@@ -97,9 +152,11 @@ if __name__ == "__main__":
         format="%(levelname)s:%(name)s:%(message)s"
     )
 
-    X, Y, Subject_array, Epoch_array = load_data(folder=config.DATA_DIR / "generated_scalograms_C3C4_gray_overlap_0.85",
+    X, Y, Subject_array, Epoch_array = load_data(folder_path=config.DATA_DIR / "generated_scalograms_ALL_gray_overlap0.733_s1",
                                                 channels=["C3", "C4"],
-                                                cmap="gray")
+                                                cmap="gray",
+                                                additional_features=True
+                                                )
 
 
     train_test_split(X, Y, test_size=0.30, random_state=42,\

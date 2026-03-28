@@ -1,4 +1,4 @@
-from scalogram_cnn_project.scalogram_generation.generator_scalogram_simple_v0 import generate_scalogram
+from scalogram_cnn_project.scalogram_generation.generator_scalogram_simple import generate_scalogram
 
 import logging
 logging.basicConfig(level=logging.INFO)

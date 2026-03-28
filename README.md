@@ -25,7 +25,11 @@ It serves the purpose of generating all scalograms associated with an EDF file o
 **Versions**
 
 ### v0
-The script generates the scalograms with overlap predetermined, but this can be cause data leakage when applying random undersampling and splitting the dataset in training and testinfg parts.
+The script generates the scalograms with overlap predetermined.
+
+### v1
+The script generates the scalograms with overlap predetermined
+and power spectral features in .npy file.
 
 ---
 

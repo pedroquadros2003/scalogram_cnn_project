@@ -28,11 +28,11 @@ MODEL_RUNNERS = {
     "v2": model_runner_v2.run_model,
 }
 
-OPTIMIZERS = [
-    ("adam", Adam),
-    ("sgd" , SGD),
-    ("rmsprop", RMSprop),
-]
+OPTIMIZERS = {
+    "adam"   : Adam,
+    "sgd"    : SGD,
+    "rmsprop": RMSprop,
+}
 
 ############################################################################
 ## Logging module
@@ -55,6 +55,7 @@ MODE = "separate"
 OVERLAP = 0.85
 CMAP = "gray"
 CHANNELS = ["C3", "C4"]
+SUBJECTS = list(range(1, 15))
 LOSO_SUBJECT = 2 ## If it does not apply, the model_runner will simply not use it.
 
 
@@ -67,12 +68,21 @@ PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
 ############################################################################
 
 MODEL_HYPER_PARAMS = {
-    # empty for the time being (but ready to be used)
+    "epsilon" : [1e-3],
+    "momentum": [0.99],
+    "cmap": [CMAP],
+    "channels": [CHANNELS],
+    "mode": [MODE],
 }
 
 MODEL_TRAIN_PARAMS = {
     "learning_rate": [1e-3, 1e-4, 1e-5],
     "batch_size": [16, 32, 64],
+    "seed": [42],
+    "subjects": [SUBJECTS],
+    "loso_subject": [LOSO_SUBJECT],
+    "overlap": [OVERLAP],
+    "optimizer_name": ["adam", "sgd", "rmsprop"],
 }
 
 ############################################################################
@@ -105,31 +115,20 @@ if __name__ == "__main__":
 
 
     # ====================================
-    # CREATING A GRID OF TRAINING PARAMS
+    # CREATING A GRID OF PARAMS
     # ====================================
 
-    fixed_params = {
-        "loso_subject": LOSO_SUBJECT,
-        "cmap": CMAP,
-        "channels": CHANNELS,
-        "seed": 42,
-        "epsilon": 1e-3,
-        "momentum": 0.99,
-        "mode": MODE,
-        "overlap": OVERLAP,
-    }
 
     train_configs = list(dict_product(MODEL_TRAIN_PARAMS))
     model_configs = list(dict_product(MODEL_HYPER_PARAMS))
 
     grid_params = []
 
-    for model_hp, train_hp, (opt_name, opt_class) in itertools.product(
+    for model_hp, train_hp in itertools.product(
         model_configs,
-        train_configs,
-        OPTIMIZERS
+        train_configs
     ):
-        params = fixed_params.copy()
+        params = {}
 
         # Model hyperparameters
         params.update(model_hp)
@@ -138,14 +137,16 @@ if __name__ == "__main__":
         params.update(train_hp)
 
         # Optimizer
+        opt_name = train_hp["optimizer_name"]
+        opt_class = OPTIMIZERS[opt_name]
+
         params.update({
-            "optimizer_name": opt_name,
             "optimizer": opt_class(learning_rate=train_hp["learning_rate"])
         })
 
         model_str = dict_to_str(model_hp)
         train_str = dict_to_str(train_hp)
-        parts = [opt_name, train_str, model_str]
+        parts = [train_str, model_str]
         params["model_name"] = "_".join(p for p in parts if p)
 
         grid_params.append(params)
@@ -172,7 +173,7 @@ if __name__ == "__main__":
             acc = run_model(
                 model=model, 
                 callback=callback,
-                training_parameters=params,
+                parameters=params,
                 input_folder=config.DATA_DIR / INPUT_FOLDER,
                 output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
             )
