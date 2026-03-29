@@ -4,10 +4,9 @@ import numpy as np
 import mne
 import pywt
 from scipy.signal import butter, filtfilt, welch
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import cv2
+from scalogram_cnn_project.utils.make_hash_id import make_hash_id
+import json
 
 from pathlib import Path
 import scalogram_cnn_project.settings.config as config
@@ -38,8 +37,9 @@ def bandpower(f, psd, fmin, fmax):
 def generate_scalogram_and_biomarkers(
         subject = 1, session = 1, channel = "Fz",
         images_dir = config.OUTPUT_DIR / f'subject1_session1_channelFz',
+        sample_file_path = config.OUTPUT_DIR / f'subject1_session1_channelFz' / "samples.jsonl",
         drowsiness_threshold=4,
-        cmap="viridis",
+        cmap="gray",
         freq_min=3, freq_max=30,
         do_resampling = False,
         resample_freq = 128.0,
@@ -115,17 +115,36 @@ def generate_scalogram_and_biomarkers(
         ## Then, we flip first axis.
         img_resized = np.flipud(img_resized)  
 
-        # Save the image as gray scale
+
+        ## Prior to saving the image, we build a dict with all relevant information and create a hash_id from it
         drowsiness_level = 1 if config.drozy_kss_scale[subject][session]>=drowsiness_threshold else 0
-        fig_name = f'drownsinessLevel{drowsiness_level}_subject{subject}_session{session}_channel{channel}_epoch{epoch_index}.png'
+
+        sample_entry = {
+            "label": int(drowsiness_level),
+            "subject": subject,
+            "session": session,
+            "epoch": epoch_index,
+            "channel": channel
+        }
+
+
+        image_id = make_hash_id(sample_entry)
+        sample_entry["image_id"] = image_id
+        fig_name = f"{image_id}.png"
+
+
+        ## Finally, we save the image as gray scale
         cv2.imwrite(str(images_dir / fig_name), img_resized)
 
+        ## And save the in .jsonl file the relation between each hash_id and its metadata
+        with open(sample_file_path, "a") as f:
+            f.write(json.dumps(sample_entry) + "\n")
 
 
         ## Next, we comput the PSD and relative power of each important frequency band
         f, psd = welch(
             window,
-            fs=128,
+            fs=resample_freq,
             nperseg=256,
             noverlap=128
         )
@@ -140,7 +159,14 @@ def generate_scalogram_and_biomarkers(
         epoch_index +=1
 
 
-    return np.stack(feature_np_list)
+    ## Creating the feature array and normalize one feature a time
+    features = np.stack(feature_np_list)
+
+    features_min = features.min(axis=0)
+    features_max = features.max(axis=0)
+
+    features_norm = (features - features_min) / (features_max - features_min + 1e-8)
+    return features_norm
 
 
 if __name__ == "__main__": 

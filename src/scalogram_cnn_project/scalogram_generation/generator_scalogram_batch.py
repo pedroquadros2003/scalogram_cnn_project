@@ -4,13 +4,11 @@ import numpy as np
 import mne
 import pywt
 from scipy.signal import butter, filtfilt
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import cv2
-
+import json
 from pathlib import Path
 import scalogram_cnn_project.settings.config as config
+from scalogram_cnn_project.utils.make_hash_id import make_hash_id
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,8 +32,9 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=4):
 def generate_scalogram(
         subject = 1, session = 1, channel = "Fz",
         images_dir = config.OUTPUT_DIR / f'subject1_session1_channelFz',
+        sample_file_path = config.OUTPUT_DIR / f'subject1_session1_channelFz' / "samples.jsonl",
         drowsiness_threshold=4,
-        cmap="viridis",
+        cmap="gray",
         freq_min=3, freq_max=30,
         do_resampling = False,
         resample_freq = 128.0,
@@ -43,10 +42,6 @@ def generate_scalogram(
         ## Determines the overlap between epochs
         overlap_ratio=0.733,
         wavelet_type = 'morl', 
-        ## Size of the first scalogram generated, according to A. Zayed (2025)
-        width_px = 662,  
-        height_px = 536,
-        dpi = 100,
         ## Final sized of the scalogram, designed to be input of a CNN-2D
         final_width_px = 64,
         final_height_px = 64,
@@ -96,55 +91,49 @@ def generate_scalogram(
         power_db = 10 * np.log10(power + 1e-9) 
 
 
-        ## Then, after adjusting the color scale, we plot the scalogram
-        vmin = power_db.min()   
-        vmax = power_db.max()
+        # Normalize power_db between [0, 255]
+        vmin = np.percentile(power_db, 20)
+        vmax = np.percentile(power_db, 99)
+        img = np.clip(power_db, vmin, vmax)
+        img = (img - vmin) / (vmax - vmin)
+        img = (img * 255).astype(np.uint8)
 
 
-        fig = plt.figure(figsize=(width_px / dpi, height_px / dpi), dpi=dpi)
-        ax = fig.add_axes([0, 0, 1, 1])
+        # Apply resize
+        img_resized = cv2.resize(img, (final_width_px, final_height_px), interpolation=cv2.INTER_CUBIC)
+        ## The first axis is for scales, which are in inverse proportion with frequencies. 
+        ## Then, we flip first axis.
+        img_resized = np.flipud(img_resized)  
 
 
-        time = np.linspace(0, epoch_duration, power_db.shape[1])
-        pcm = ax.pcolormesh(
-            time,
-            freqs,
-            power_db,
-            shading='auto',
-            cmap=cmap,
-            vmin=vmin,
-            vmax=vmax
-        )
 
-        ## Next, we run a command that reduces the plot image to just the 
-        ## bounded box, which is better for processing the image with a CNN-2D:
-
-        extent = ax.get_window_extent().transformed(
-            fig.dpi_scale_trans.inverted()
-        )
-
+        ## Prior to saving the image, we build a dict with all relevant information and create a hash_id from it
         drowsiness_level = 1 if config.drozy_kss_scale[subject][session]>=drowsiness_threshold else 0
 
-        fig_name = f'drownsinessLevel{drowsiness_level}_subject{subject}_session{session}_channel{channel}_epoch{epoch_index}.png'
-        fig.savefig(
-            images_dir / fig_name,
-            bbox_inches=extent,
-            dpi=dpi
-        )
+        sample_entry = {
+            "label": int(drowsiness_level),
+            "subject": subject,
+            "session": session,
+            "epoch": epoch_index,
+            "channel": channel
+        }
 
-        plt.close()
 
-        ## Finally, we resize the scalograms via cubic interpolation to size of the CNN-2D input
+        image_id = make_hash_id(sample_entry)
+        sample_entry["image_id"] = image_id
+        fig_name = f"{image_id}.png"
 
-        image_path = images_dir / fig_name
-        image = cv2.imread(image_path)
 
-        resized_image = cv2.resize(src = image, dsize= (final_width_px, final_height_px), interpolation=cv2.INTER_CUBIC)
-        cv2.imwrite(image_path, resized_image)
+        ## Finally, we save the image as gray scale
+        cv2.imwrite(str(images_dir / fig_name), img_resized)
+
+
+        ## And save the in .jsonl file the relation between each hash_id and its metadata
+        with open(sample_file_path, "a") as f:
+            f.write(json.dumps(sample_entry) + "\n")
 
 
         ## Updating the epoch index
-
         epoch_index +=1
 
 

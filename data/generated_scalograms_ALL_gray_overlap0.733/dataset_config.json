@@ -1,0 +1,44 @@
+{
+  "scalogram": {
+    "freq_min": 3,
+    "freq_max": 30,
+    "do_resampling": true,
+    "resample_freq": 128.0,
+    "epoch_duration": 30.0,
+    "overlap_ratio": 0.733,
+    "wavelet_type": "cmor1.5-2.5",
+    "cmap": "gray",
+    "final_width_px": 64,
+    "final_height_px": 64,
+    "drowsiness_threshold": 4
+  },
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+  ],
+  "channels": [
+    "C3",
+    "C4",
+    "Cz",
+    "Fz",
+    "Pz"
+  ],
+  "sessions": [
+    1,
+    2,
+    3
+  ],
+  "extra_input": false
+}

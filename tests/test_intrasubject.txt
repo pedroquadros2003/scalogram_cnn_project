@@ -1,0 +1,26 @@
+############ TO BE TESTED 1 ############
+
+
+    MODEL = "v0"
+    MODEL_RUNNER = "v1"
+    OVERLAP=0.733
+    SUBJECTS= [1] / [2]
+    CHANNELS=["C3", "C4", "Cz", "Fz", "Pz"]
+
+    MODEL_HYPER_PARAMS = {
+    "epsilon" : [1e-3],
+    "momentum": [0.99],
+    "cmap": [CMAP],
+    "channels": [CHANNELS],
+    "mode": ["mix", "separate"],
+    }
+
+    MODEL_TRAIN_PARAMS = {
+        "learning_rate": [1e-4],
+        "batch_size": [32],
+        "seed": [42],
+        "subjects": [SUBJECTS],
+        "overlap": [OVERLAP],
+        "optimizer_name": ["sgd"],
+    }
+

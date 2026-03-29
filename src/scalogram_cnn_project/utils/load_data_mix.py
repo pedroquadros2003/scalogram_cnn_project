@@ -4,6 +4,8 @@ import cv2
 import os
 from scalogram_cnn_project.utils.list_files import list_files
 import scalogram_cnn_project.settings.config as config
+import json
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -15,67 +17,67 @@ def load_data(folder_path="GeneratedScalograms",
               additional_features=False
               ):
 
+
     images = []
     Y = []
     Epoch_list = []
     Subject_list = []
     Extra_features_list = []
+    index = {}
 
-    # Get list of files
-    selected_files = list_files(folder_path)
 
-    # Load feature array if needed
+    # Load index dictionary that has all metadata for each scalogram
+    with open(folder_path / "index.json") as f:
+        index = json.load(f)
+
+
+    # -------------------------
+    # LOAD FEATURES IF NEEDED
+    # -------------------------
+
     if additional_features:
         
         features_array = np.load(folder_path / "data.npy")
         # Expected shape:
         # (subject, session, channel, epoch, features)
 
-        # Create channel → index mapping (must match generator logic)
-        # +1 because index 0 is reserved as dummy channel
+        # Create subject → index mapping. +1 is for dummy subject
+        subject_map = {s: i + 1 for i, s in enumerate(subjects)}
+
+        # Channel mapping (must match generator)
         channel_map = {ch: i + 1 for i, ch in enumerate(channels)}
 
-    for file in selected_files:
 
+    # -------------------------
+    # LOOP FOR SCALOGRAMS
+    # -------------------------
 
-        # Check if file belongs to selected channels
-        if not any(f"channel{ch}" in file for ch in channels):
+    for image_id, meta in index.items():
+
+        # filters
+        if meta["channel"] not in channels:
             continue
 
-        # Check if file belongs to selected subjects
-        if not any(f"subject{sub}" in file for sub in subjects):
+        if meta["subject"] not in subjects:
             continue
 
-        # Ensure file is an image
-        if not (".jpg" in file or ".png" in file):
+        file_name = f"{image_id}.png"
+        full_path = os.path.join(folder_path, file_name)
+
+        if not os.path.exists(full_path):
+            logger.warning(f"{file_name} not found, skipping.")
             continue
 
-
-        splitted = file.split("_")
-
-        # -------------------------
-        # EXTRACT METADATA
-        # -------------------------
-        # Example filename:
-        # drownsinessLevel0_subject1_session1_channelC3_epoch0.png
-
-        subject = int(splitted[1].replace("subject", ""))
-        session = int(splitted[2].replace("session", ""))
-        channel_str = splitted[3].replace("channel", "")
-        epoch = int(splitted[4].replace("epoch", "").replace(".png", ""))
+        subject = meta["subject"]
+        session = meta["session"]
+        channel_str = meta["channel"]
+        epoch = meta["epoch"]
+        label = meta["label"]
 
         Subject_list.append(subject)
         Epoch_list.append(epoch)
 
-        full_path = os.path.join(folder_path, file)
-
-        if not os.path.exists(full_path):
-            logger.warning(f"{file} not found, skipping.")
-            continue
-
-        # -------------------------
-        # LOAD IMAGE
-        # -------------------------
+        # Load image
         if cmap == "viridis":
             img = cv2.imread(full_path)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -83,32 +85,22 @@ def load_data(folder_path="GeneratedScalograms",
             img = cv2.imread(full_path, cv2.IMREAD_GRAYSCALE)
 
         images.append(img)
+        Y.append(label)
 
-        # -------------------------
-        # EXTRACT LABEL
-        # -------------------------
-        # Assumes label is encoded at fixed position in filename
-        Y.append(int(file[16]))
-
-        # -------------------------
-        # LOAD ADDITIONAL FEATURES
-        # -------------------------
+        # extra features
         if additional_features:
-
-            if channel_str not in channel_map:
-                raise ValueError(f"Channel {channel_str} not found in channel_map")
-
             ch_idx = channel_map[channel_str]
+            subject_idx = subject_map[subject]
 
-            # Extract feature vector aligned with this image
             extra_feat = features_array[
-                subject,
+                subject_idx,
                 session,
                 ch_idx,
                 epoch
             ]
 
             Extra_features_list.append(extra_feat)
+
 
     # -------------------------
     # FINAL FORMATTING
@@ -152,7 +144,7 @@ if __name__ == "__main__":
         format="%(levelname)s:%(name)s:%(message)s"
     )
 
-    X, Y, Subject_array, Epoch_array = load_data(folder_path=config.DATA_DIR / "generated_scalograms_ALL_gray_overlap0.733_s1",
+    X, Y, Subject_array, Epoch_array = load_data(folder_path=config.DATA_DIR / "generated_scalograms_ALL_gray_overlap0.733_subject1",
                                                 channels=["C3", "C4"],
                                                 cmap="gray",
                                                 additional_features=True

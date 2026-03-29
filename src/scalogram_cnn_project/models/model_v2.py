@@ -147,7 +147,7 @@ def create_model(parameters):
     # EXTRA FEATURE INPUT AND FEATURE FUSION
     # ------------------------------------------------------------------
 
-    extra_input = Input(shape=(n_additional_features,), name="extra_features")
+    extra_input = Input(shape=(n_additional_features*mode_multiplier,), name="extra_features")
 
     x = Concatenate()([x, extra_input])
 
@@ -167,9 +167,7 @@ def create_model(parameters):
     # MODEL DEFINITION
     # ------------------------------------------------------------------
     
-    metrics=[
-        BinaryAccuracy(threshold=0.0, name="accuracy"),
-            ]
+    metrics=[BinaryAccuracy(threshold=0.0, name="accuracy")]
 
 
     callback = EarlyStopping(
@@ -182,12 +180,15 @@ def create_model(parameters):
     )
 
     model = Model(
-        optimizer=optimizer,
-        loss=BinaryCrossentropy(from_logits=True),
-        metrics = metrics,
         inputs=[image_input, extra_input],
         outputs=output,
         name="cnn_with_feature_injection"
+    )
+
+    model.compile(
+        optimizer=optimizer,
+        loss=BinaryCrossentropy(from_logits=True),
+        metrics=metrics
     )
 
     return model, callback

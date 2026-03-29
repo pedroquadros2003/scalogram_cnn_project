@@ -5,6 +5,7 @@ from collections import defaultdict
 from scalogram_cnn_project.utils.list_files import list_files
 import scalogram_cnn_project.settings.config as config
 from pathlib import Path
+import json
 
 
 import logging
@@ -16,11 +17,11 @@ def load_data(folder_path="GeneratedScalograms",
               subjects=range(1, 15),
               additional_features=False):
 
+    index = {}
+    # Load index dictionary that has all metadata for each scalogram
+    with open(folder_path / "index.json") as f:
+        index = json.load(f)
 
-    # -------------------------
-    # READ FILE LIST
-    # -------------------------
-    all_files = list_files(folder_path)
 
     grouped = defaultdict(dict)
     labels = {}
@@ -33,53 +34,39 @@ def load_data(folder_path="GeneratedScalograms",
         features_array = np.load(folder_path / "data.npy")
         # shape: (subject, session, channel, epoch, features)
 
+        # Create subject → index mapping. +1 is for dummy subject
+        subject_map = {s: i + 1 for i, s in enumerate(subjects)}
+
         # Channel mapping (must match generator)
         channel_map = {ch: i + 1 for i, ch in enumerate(channels)}
 
+
     # -------------------------
-    # PARSE FILENAMES
+    # LOOP FOR SCALOGRAMS
     # -------------------------
-    for file in all_files:
+    for image_id, meta in index.items():
 
+        subject = meta["subject"]
+        session = meta["session"]
+        epoch = meta["epoch"]
+        channel = meta["channel"]
+        label = meta["label"]
 
-        # Check if file belongs to selected channels
-        if not any(f"channel{ch}" in file for ch in channels):
+        # filters
+        if subject not in subjects:
             continue
 
-        # Check if file belongs to selected subjects
-        if not any(f"subject{sub}" in file for sub in subjects):
+        if channel not in channels:
             continue
 
-        # Ensure file is an image
-        if not (".jpg" in file or ".png" in file):
-            continue
+        # define sample_id (same for all channels of a same epoch)
+        sample_id = (subject, session, epoch)
 
-        
-        splitted = file.split("_")
+        file_name = f"{image_id}.png"
 
-        # Example:
-        # drownsinessLevel0_subject1_session1_channelC3_epoch0.png
-
-        label   = int(splitted[0].replace("drownsinessLevel", ""))
-        subject = int(splitted[1].replace("subject", ""))
-        session = int(splitted[2].replace("session", ""))
-        epoch   = int(splitted[4].replace("epoch", "").replace(".png", ""))
-
-        # Extract channel
-        channel = None
-        for ch in channels:
-            if f"channel{ch}" in file:
-                channel = ch
-                break
-
-        if channel is None:
-            continue
-
-        # Build sample_id (same sample across channels)
-        sample_id = file.replace(f"_channel{channel}", "")
-
-        grouped[sample_id][channel] = file
+        grouped[sample_id][channel] = file_name
         labels[sample_id] = label
+
         metadata[sample_id] = {
             "subject": subject,
             "session": session,
@@ -136,9 +123,10 @@ def load_data(folder_path="GeneratedScalograms",
                     raise ValueError(f"Channel {ch} not found in channel_map")
 
                 ch_idx = channel_map[ch]
+                subject_idx = subject_map[subject]
 
                 feat = features_array[
-                    subject,
+                    subject_idx,
                     session,
                     ch_idx,
                     epoch
@@ -199,7 +187,7 @@ if __name__ == "__main__":
         format="%(levelname)s:%(name)s:%(message)s"
     )
 
-    X, Y, Subject_array, Epoch_array = load_data(folder_path=config.DATA_DIR / "generated_scalograms_ALL_gray_overlap0.733_s1",
+    X, Y, Subject_array, Epoch_array = load_data(folder_path=config.DATA_DIR / "generated_scalograms_ALL_gray_overlap0.733_subject1",
                                                 channels=["C3", "C4"],
                                                 cmap="gray",
                                                 additional_features=True)

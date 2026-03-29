@@ -27,7 +27,7 @@ def run_model(parameters, model, callback, input_folder, output_folder):
 
     cmap = parameters["cmap"]
     channels = parameters["channels"]
-    model_name = parameters["model_name"]
+    model_id = parameters["model_id"]
     seed = parameters["seed"]
     batch_size = parameters["batch_size"]
     mode = parameters["mode"]
@@ -100,7 +100,7 @@ def run_model(parameters, model, callback, input_folder, output_folder):
         plt.ylabel(title)
         plt.xlabel("Epoch")
         plt.legend(["Train", "Validation"])
-        plt.savefig(output_folder / f"{model_name}_{title}.png")
+        plt.savefig(output_folder / f"{model_id}_{title}.png")
         plt.close()
 
 

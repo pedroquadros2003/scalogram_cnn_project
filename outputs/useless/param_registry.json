@@ -1,0 +1,706 @@
+{
+  "model_00000": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00001": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00002": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00003": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00004": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00005": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00006": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00007": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00008": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00009": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00010": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00011": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00012": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00013": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00014": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00015": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00016": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00017": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 0.0001,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00018": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00019": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00020": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 16,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00021": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00022": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00023": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 32,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "model_00024": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "adam"
+  },
+  "model_00025": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "sgd"
+  },
+  "model_00026": {
+    "epsilon": 0.001,
+    "momentum": 0.99,
+    "cmap": "gray",
+    "channels": [
+      "C3",
+      "C4"
+    ],
+    "mode": "separate",
+    "extra_layer": false,
+    "extra_layer_num_filters": 16,
+    "first_layer_num_filters": 64,
+    "second_layer_num_filters": 32,
+    "kernel_size": 2,
+    "num_neurons_dense": 128,
+    "n_additional_features": 3,
+    "learning_rate": 1e-05,
+    "batch_size": 64,
+    "seed": 42,
+    "subjects": [
+      1
+    ],
+    "loso_subject": 2,
+    "overlap": 0.733,
+    "optimizer_name": "rmsprop"
+  },
+  "MODEL": "v2",
+  "MODEL_RUNNER": "v1"
+}
