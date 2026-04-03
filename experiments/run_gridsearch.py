@@ -50,18 +50,10 @@ logger = logging.getLogger(__name__)
 ## PARAMETERS
 ############################################################################
 
-MODEL_RUNNER = "v1"
-MODEL = "v2"
-
-OVERLAP = 0.733
-CMAP = "gray"
-CHANNELS = ["C3", "C4"]
-SUBJECTS = [1]
-LOSO_SUBJECT = 2 ## If it does not apply, the model_runner will simply not use it.
+INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
+OUTPUT_FOLDER = "test_no_extra_input_separate"
 
 
-INPUT_FOLDER = f"generated_scalograms_ALL_{CMAP}_overlap{OVERLAP}_subject1"
-OUTPUT_FOLDER = "useless"
 PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
 PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
 
@@ -69,27 +61,31 @@ PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
 ## GRID PARAMETERS
 ############################################################################
 
+
+MODEL =  "v1"  #  "v2" #
+MODEL_RUNNER = "v1"
+
+
 MODEL_HYPER_PARAMS = {
     "epsilon" : [1e-3],
     "momentum": [0.99],
-    "cmap": [CMAP],
-    "channels": [CHANNELS],
-    "mode": ["separate"],
+    "cmap": [ "gray" ],
+    "channels": [ ["C3", "C4", "Cz", "Fz", "Pz"] ],
+    "mode":    ["separate"], # ["mix"], # 
 }
 
 MODEL_TRAIN_PARAMS = {
     "learning_rate": [1e-3, 1e-4, 1e-5],
     "batch_size": [16, 32, 64],
     "seed": [42],
-    "subjects": [SUBJECTS],
-    "loso_subject": [LOSO_SUBJECT],
-    "overlap": [OVERLAP],
-    "optimizer_name": ["adam", "sgd", "rmsprop"],
+    "subjects": [ list(range(1,15)) ],
+    "overlap": [ 0.733 ],
+    "optimizer_name": ["sgd"],
 }
 
 MODEL_HYPER_PARAMS.update(
 {
-    "extra_layer" : [False],
+    "extra_layer" : [True],
     "extra_layer_num_filters": [16],
     "first_layer_num_filters": [64],
     "second_layer_num_filters": [32],
@@ -98,6 +94,9 @@ MODEL_HYPER_PARAMS.update(
     "n_additional_features": [3]
 }
 )
+
+
+
 
 ############################################################################
 ## Main Function
@@ -179,10 +178,13 @@ if __name__ == "__main__":
     # SAVE PARAMS REGISTRY
     # ==============================
 
-    param_registry["MODEL"] = MODEL
-    param_registry["MODEL_RUNNER"] = MODEL_RUNNER
 
     with open(PARAM_REGISTRY_FILE, "w") as f:
+        
+        param_registry["MODEL"] = MODEL
+        param_registry["MODEL_RUNNER"] = MODEL_RUNNER
+        param_registry["INPUT_FOLDER"] = INPUT_FOLDER
+
         json.dump(param_registry, f, indent=2)
 
 

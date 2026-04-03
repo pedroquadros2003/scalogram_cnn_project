@@ -10,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 OVERLAP = 0.733
 CMAP = "gray" # gray 1 channel or viridis 3 channels RGB
-SUBJECTS = [6] # range(1,15)
+SUBJECTS = list(range(1,15)) # range(1,15)
 SESSIONS = [1, 2, 3]
-CHANNELS = ["C3"] # ["C3", "C4", "Cz", "Fz", "Pz"]
+CHANNELS = ["C3", "C4", "Cz", "Fz", "Pz"]
 
 
-OUTPUT_FOLDER = "use_less" # f"generated_scalograms_ALL_{CMAP}_overlap{OVERLAP}_subject2"
+OUTPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
 SAMPLE_FILE_PATH = config.OUTPUT_DIR / OUTPUT_FOLDER / "samples.jsonl"
 INDEX_FILE_PATH = config.OUTPUT_DIR / OUTPUT_FOLDER / "index.json" 
 DATASET_CONFIG_PATH = config.OUTPUT_DIR / OUTPUT_FOLDER / "dataset_config.json"

@@ -1,32 +1,30 @@
 ############ TO BE TESTED ############
-
+generated_scalograms_ALL_gray_overlap0.733_extra_input
 
     MODEL = "v2" / "v1"
     MODEL_RUNNER = "v1"
-    OVERLAP=0.733
-    SUBJECTS=list(range(1,15))
-    CHANNELS=["C3", "C4", "Cz", "Fz", "Pz"]
+
 
     MODEL_HYPER_PARAMS = {
         "epsilon" : [1e-3],
         "momentum": [0.99],
-        "cmap": [CMAP],
-        "channels": [CHANNELS],
-        "mode": ["mix", "separate"],
+        "cmap": [ "gray" ],
+        "channels": [ ["C3", "C4", "Cz", "Fz", "Pz"] ],
+        "mode": ["mix"], #  ["separate"],
     }
 
     MODEL_TRAIN_PARAMS = {
         "learning_rate": [1e-3, 1e-4, 1e-5],
         "batch_size": [16, 32, 64],
         "seed": [42],
-        "subjects": [SUBJECTS],
-        "overlap": [OVERLAP],
+        "subjects": [ list(range(1,15)) ],
+        "overlap": [ 0.733 ],
         "optimizer_name": ["sgd"],
     }
 
     MODEL_HYPER_PARAMS.update(
     {
-        "extra_layer" : [False],
+        "extra_layer" : [True],
         "extra_layer_num_filters": [16],
         "first_layer_num_filters": [64],
         "second_layer_num_filters": [32],
