@@ -12,7 +12,9 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
----
+## Use of Logging Package
+
+Instead of using print statements in the source code of the scalogram_cnn_project package, messages to the terminal are configured using the Logging package.
 
 # Generator Scripts
 
@@ -31,7 +33,6 @@ The script generates the scalograms with overlap predetermined.
 The script generates the scalograms with overlap predetermined
 and power spectral features in .npy file.
 
----
 
 ## generator/generate_scalogram_simple
 
@@ -44,7 +45,6 @@ It serves the purpose of generating just the first scalogram associated with an 
 ### v0
 The script generates just the first scalogram according to the arguments passed to the function.
 
----
 
 
 # Models
@@ -56,13 +56,36 @@ Models are function that create model and callback objects.
 **Versions**
 
 ### v0
-It is a model with fixed hyperparameters; its architecture matches the description of two-layered CNN-2D as described by A. Zayed (2025).
+It is a model with fixed hyperparameters; its architecture matches the description of two-layered CNN-2D as described by A. Zayed (2025). The required parameters are:
+
+```python
+REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
+
+REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode"]
+```
+
 
 ### v1
-It is a model with variable hyperparameters; its architecture is a variation of the one proposed by A. Zayed (2025), as it allows the user to utilize one extra convolutional layers, as well as adjust the number of filters in each layer, the kernel size etc.
+It is a model with variable hyperparameters; its architecture is a variation of the one proposed by A. Zayed (2025), as it allows the user to utilize one extra convolutional layers, as well as adjust the number of filters in each layer, the kernel size etc. The required parameters are:
+
+```python
+REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
+
+REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "n_additional_features",
+                        "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense",
+                        "first_layer_num_filters", "second_layer_num_filters", ]
+```
 
 ### v2
-It is also a model with variable hyperparameters; its architecture is a variation of the one proposed by A. Zayed (2025), as it allows the user to utilize one extra convolutional layers, as well as adjust the number of filters in each layer, the kernel size etc. Also, right after the flatten layer, the CNN receives extra input, which are normalized biomarkers calculated as the ratio of power in different bands.
+It is also a model with variable hyperparameters; its architecture is a variation of the one proposed by A. Zayed (2025), as it allows the user to utilize one extra convolutional layers, as well as adjust the number of filters in each layer, the kernel size etc. Also, right after the flatten layer, the CNN receives extra input, which are normalized biomarkers calculated as the ratio of power in different bands. The required parameters are:
+
+```python
+REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
+
+REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "n_additional_features",
+                        "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense",
+                        "first_layer_num_filters", "second_layer_num_filters", ]
+```
 
 # Model Runners
 
@@ -81,8 +104,285 @@ It is also prepared to receive scalograms from a selected set of channels, using
 ### v2
 It is also prepared to receive scalograms from a selected set of channels, using a color map to the user's choice. It solves the problem of data leakage by applying a Leave-One-Subject-Out (LOSO) validation.
 
---
+# Experiment Scripts Overview
 
-# Use of Logging Package
+This repository contains several scripts used to run experiments with CNN models trained on scalogram images. The scripts support three main experiment strategies:
 
-Instead of using print statements in the source code of the scalogram_cnn_project package, messages to the terminal are configured using the Logging package.
+* *Leave-One-Subject-Out cross-validation*
+* *Manual grid search*
+* *Automated hyperparameter optimization using Keras Tuner*
+
+Each script orchestrates model creation, training execution, parameter management, and experiment reproducibility. For using these scripts, one should specify the following constants in the beginning of the code:
+
+```python
+# Folder containing the precomputed scalogram images used as model input
+INPUT_FOLDER  = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
+
+# Output directory where experiment results will be stored
+OUTPUT_FOLDER = "useless"
+
+# YAML file defining the parameter search space for the grid search
+PARAMS_FILE   = config.PARAM_SEARCH_DIR / "gridsearch_example.yaml"
+
+# File that stores intermediate experiment results to allow resuming interrupted runs
+PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
+
+# File that records the full parameter configuration for each experiment run
+PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
+
+# Model architecture version to be used (v0, v1, v2)
+MODEL =  "v1"
+
+# Training pipeline implementation used to run the model
+MODEL_RUNNER = "v1"
+```
+
+
+# 1. `run_cross_validation_loso.py`
+
+This script performs *Leave-One-Subject-Out (LOSO) cross-validation* defined in a YAML configuration file. It has only support for fixed and choice modes.
+
+
+# 2. `run_gridsearch.py`
+
+This script performs a *grid search* over the hyperparameter space defined in a YAML configuration file. It has only support for fixed and choice modes.
+
+
+
+# 3. `run_keras_tuner.py`
+
+The script performs a *random search* over the hyperparameter space defined in a YAML configuration file. It has support for all modes, including the interval ones.
+
+
+## YAML Parameter Loading
+
+The hyperparameter search space is loaded dynamically:
+
+```python
+with open(PARAMS_FILE) as f:
+    config_params = yaml.safe_load(f)
+```
+
+The YAML file defines:
+
+* `MODEL_HYPER_PARAMS`
+* `MODEL_TRAIN_PARAMS`
+
+These parameters are interpreted by the `build_model()` function.
+
+---
+
+## Model Builder
+
+The function:
+
+```
+build_model()
+```
+
+translates YAML parameter definitions into Keras Tuner search parameters.
+
+It dynamically constructs the model and optimizer based on the sampled hyperparameters.
+
+
+## Trial Execution
+
+For each trial, the tuner:
+
+1. Samples hyperparameters
+2. Builds the model
+3. Runs training
+4. Reports the validation loss.
+
+
+## Model Saving
+
+Each trained model is saved automatically in:
+
+```
+saved_models/trial_<id>/model.keras
+```
+
+This allows inspection and reuse of trained models.
+
+
+## Search Configuration
+
+The number of experiments performed by the tuner is controlled by:
+
+```
+MAX_TRIALS
+```
+
+## Experiment Reproducibility
+
+For reproducibility, the YAML configuration used for the search is copied to the experiment output directory:
+
+```
+search_params.yaml
+```
+
+## Final Results
+
+After the search finishes, the best trials are stored in:
+
+```
+best_trials.txt
+```
+
+Example entry:
+
+```
+Rank 0 | val_loss=0.21543 | params={...}
+```
+
+
+
+# YAML Configuration for the experiments scripts
+
+This project uses `.yaml` configuration files to define both *model hyperparameters* and *training parameters* used during hyperparameter optimization.
+
+These parameters are interpreted by the `build_model()` module, which dynamically constructs a search space for *Keras Tuner*.
+
+The configuration is divided into two main sections:
+
+- `MODEL_HYPER_PARAMS` → parameters that affect the *architecture of the model*
+- `MODEL_TRAIN_PARAMS` → parameters that affect *training behavior*
+
+Each parameter specifies *how it should be sampled* during the search.
+
+
+# Configuration Structure
+
+Example:
+
+```yaml
+MODEL_HYPER_PARAMS:
+
+  epsilon:
+    mode: log_interval
+    values: [1e-4, 1e-2]
+
+MODEL_TRAIN_PARAMS:
+
+  learning_rate:
+    mode: log_interval
+    values: [1e-5, 1e-2]
+````
+
+Each parameter must contain the following structure:
+
+```yaml
+parameter_name:
+  mode: <sampling_mode>
+  values: <parameter_values>
+```
+
+
+# Parameter Sampling Modes
+
+The `mode` field defines *how the parameter will be sampled* during hyperparameter search.
+
+The following modes are supported.
+
+
+## 1. fixed
+
+The parameter value is constant and *not optimized*.
+
+Example:
+
+```yaml
+cmap:
+  mode: fixed
+  values: ["gray"]
+```
+
+Use this when the parameter *must remain constant across experiments*.
+
+
+## 2. choice
+
+The parameter is chosen from a *discrete set of values*.
+
+Example:
+
+```yaml
+optimizer_name:
+  mode: choice
+  values: ["adam", "sgd", "rmsprop"]
+```
+
+Use this when you want to test *different categorical options*.
+
+Typical examples include:
+
+* optimizer
+* activation functions
+* architecture variants
+
+
+## 3. float_interval
+
+Samples a *continuous floating-point value* within an interval.
+
+Example:
+
+```yaml
+momentum:
+  mode: float_interval
+  values: [0.85, 0.99]
+```
+
+Use this when the parameter is *continuous* and does *not require logarithmic scaling*.
+
+
+## 4. log_interval
+
+Samples a floating-point value *logarithmically*.
+
+Example:
+
+```yaml
+learning_rate:
+  mode: log_interval
+  values: [1e-5, 1e-2]
+```
+
+
+Use this for parameters that vary across *orders of magnitude*, such as:
+
+* learning rate
+* epsilon
+* regularization coefficients
+
+
+## 5. int_interval
+
+Samples an *integer value within a range*.
+
+Example:
+
+```yaml
+batch_size:
+  mode: int_interval
+  values: [16, 128]
+```
+
+Typical uses include:
+
+* batch size
+* number of neurons
+* number of filters
+* kernel size
+
+
+# Ready-for-test yaml files
+
+In the directory: 
+
+```
+/parameter_searches
+```
+
+One can find examples of .yaml for each experiment script.

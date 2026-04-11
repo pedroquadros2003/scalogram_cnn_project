@@ -13,3 +13,5 @@ opencv-python
 PyWavelets
 imbalanced-learn
 tensorflow[and-cuda]
+keras_tuner
+pyyaml

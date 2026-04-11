@@ -3,14 +3,24 @@
 ############################################################################
 
 import tensorflow as tf 
-from keras.optimizers import Adam, SGD, RMSprop
 import numpy as np
 import itertools
 import json
 import gc
 import scalogram_cnn_project.settings.config as config
+import yaml
+
 from scalogram_cnn_project.utils.dict_product import dict_product
-from scalogram_cnn_project.utils.dict_to_str import dict_to_str
+from scalogram_cnn_project.utils.simplify_config_space import simplify_config_space
+
+############################################################################
+## Configure GPU memory growth BEFORE anything touches the GPU
+############################################################################
+
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
 
 ############################################################################
 ## Model Runners, Model Creators and Optimizers
@@ -30,12 +40,6 @@ MODEL_RUNNERS = {
     "v2": model_runner_v2.run_model,
 }
 
-OPTIMIZERS = {
-    "adam"   : Adam,
-    "sgd"    : SGD,
-    "rmsprop": RMSprop,
-}
-
 ############################################################################
 ## Logging module
 ############################################################################
@@ -47,11 +51,12 @@ logger = logging.getLogger(__name__)
 
 
 ############################################################################
-## PARAMETERS
+## FILE PARAMETERS
 ############################################################################
 
-INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
-OUTPUT_FOLDER = "test_no_extra_input_separate"
+INPUT_FOLDER  = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
+OUTPUT_FOLDER = "useless"
+PARAMS_FILE   =  config.PARAM_SEARCH_DIR / "gridsearch_example.yaml"
 
 
 PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
@@ -66,36 +71,11 @@ MODEL =  "v1"  #  "v2" #
 MODEL_RUNNER = "v1"
 
 
-MODEL_HYPER_PARAMS = {
-    "epsilon" : [1e-3],
-    "momentum": [0.99],
-    "cmap": [ "gray" ],
-    "channels": [ ["C3", "C4", "Cz", "Fz", "Pz"] ],
-    "mode":    ["separate"], # ["mix"], # 
-}
+with open(PARAMS_FILE) as f:
+    config_params = yaml.safe_load(f)
 
-MODEL_TRAIN_PARAMS = {
-    "learning_rate": [1e-3, 1e-4, 1e-5],
-    "batch_size": [16, 32, 64],
-    "seed": [42],
-    "subjects": [ list(range(1,15)) ],
-    "overlap": [ 0.733 ],
-    "optimizer_name": ["sgd"],
-}
-
-MODEL_HYPER_PARAMS.update(
-{
-    "extra_layer" : [True],
-    "extra_layer_num_filters": [16],
-    "first_layer_num_filters": [64],
-    "second_layer_num_filters": [32],
-    "kernel_size": [2],
-    "num_neurons_dense": [128],
-    "n_additional_features": [3]
-}
-)
-
-
+MODEL_HYPER_PARAMS = simplify_config_space(config_params["MODEL_HYPER_PARAMS"])
+MODEL_TRAIN_PARAMS = simplify_config_space(config_params["MODEL_TRAIN_PARAMS"])
 
 
 ############################################################################
@@ -150,12 +130,6 @@ if __name__ == "__main__":
 
         # Training parameters
         params.update(train_hp)
-
-        # Optimizer
-        opt_name = train_hp["optimizer_name"]
-        opt_class = OPTIMIZERS[opt_name]
-
-        params["optimizer"] = opt_class(learning_rate=train_hp["learning_rate"])
 
 
         # Create Model ID

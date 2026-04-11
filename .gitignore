@@ -7,3 +7,15 @@ __pycache__/
 venv_wsl
 venv_wsl/
 *.egg-info/
+
+outputs/*
+!outputs/.gitkeep
+
+#data/*
+#!data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/
+#!data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/*
+
+parameter_searches/*
+!parameter_searches/cross_validation_loso_example.yaml
+!parameter_searches/gridsearch_example.yaml
+!parameter_searches/keras_search_example.yaml

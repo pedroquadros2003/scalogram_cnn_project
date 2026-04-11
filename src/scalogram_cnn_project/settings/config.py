@@ -9,6 +9,8 @@ DATA_DIR = PROJECT_DIR / "data"
 
 OUTPUT_DIR = PROJECT_DIR / "outputs"
 
+PARAM_SEARCH_DIR = PROJECT_DIR / "parameter_searches"
+
 # Linux path mapping
 DATASET_DIR = Path("/mnt/c/Users/peuqu/OneDrive/Desktop/IC Harlei-Sarah/DataSets")
 

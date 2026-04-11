@@ -20,9 +20,19 @@ import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
+
+from keras.optimizers import Adam, SGD, RMSprop
+OPTIMIZERS = {
+    "adam"   : Adam,
+    "sgd"    : SGD,
+    "rmsprop": RMSprop,
+}
+
+
+
 def create_model(parameters):
 
-    REQUIRED_TRAIN_KEYS = [ "seed", "optimizer"]
+    REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
     REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "n_additional_features", \
                             "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
                             "first_layer_num_filters", "second_layer_num_filters", ]
@@ -33,7 +43,11 @@ def create_model(parameters):
     validate_dict_params(parameters, REQUIRED_TRAIN_KEYS)
 
     seed = parameters["seed"]
-    optimizer = parameters["optimizer"]
+
+    # Optimizer
+    opt_name = parameters["optimizer_name"]
+    opt_class = OPTIMIZERS[opt_name]
+    optimizer = opt_class(learning_rate=parameters["learning_rate"])
 
 
     logger.info("Validating model parameters...")
@@ -54,26 +68,8 @@ def create_model(parameters):
 
 
 
-    color_channels_per_image = 3
-
-    if cmap == "gray":
-        color_channels_per_image=1
-    elif cmap == "viridis":
-        color_channels_per_image=3
-    else:
-        cmap == "gray"
-        color_channels_per_image=1
-
-
-    mode_multiplier = 1
-
-    if mode == "mix":
-        mode_multiplier = 1
-    elif mode == "separate":
-        mode_multiplier = len(channels)
-    else:
-        mode == "mix"
-        mode_multiplier = 1
+    color_channels_per_image = 1 if cmap == "gray" else 3
+    mode_multiplier = 1 if mode == "mix" else len(channels)
 
 
 

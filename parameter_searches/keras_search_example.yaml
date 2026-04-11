@@ -1,0 +1,78 @@
+MODEL_HYPER_PARAMS:
+
+  epsilon:
+    mode: log_interval
+    values: [1e-4, 1e-2]
+
+  momentum:
+    mode: float_interval
+    values: [0.85, 0.99]
+
+  cmap:
+    mode: fixed
+    values: ["gray"]
+
+  channels:
+    mode: fixed
+    values:
+      - ["C3", "C4", "Cz", "Fz", "Pz"]
+
+  mode:
+    mode: fixed
+    values: ["separate"]
+
+  extra_layer:
+    mode: choice
+    values: [true, false]
+
+  extra_layer_num_filters:
+    mode: int_interval
+    values: [8, 64]
+
+  first_layer_num_filters:
+    mode: int_interval
+    values: [32, 128]
+
+  second_layer_num_filters:
+    mode: int_interval
+    values: [16, 96]
+
+  kernel_size:
+    mode: int_interval
+    values: [2, 5]
+
+  num_neurons_dense:
+    mode: int_interval
+    values: [32, 256]
+
+  n_additional_features:
+    mode: fixed
+    values: [3]
+
+
+MODEL_TRAIN_PARAMS:
+
+  learning_rate:
+    mode: log_interval
+    values: [1e-5, 1e-2]
+
+  batch_size:
+    mode: int_interval
+    values: [16, 128]
+
+  seed:
+    mode: fixed
+    values: [42]
+
+  subjects:
+    mode: fixed
+    values:
+      - [1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+
+  overlap:
+    mode: fixed
+    values: [0.733]
+
+  optimizer_name:
+    mode: choice
+    values: ["adam", "sgd", "rmsprop"]

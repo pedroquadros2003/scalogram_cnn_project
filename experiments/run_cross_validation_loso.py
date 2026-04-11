@@ -3,17 +3,19 @@
 ############################################################################
 
 import tensorflow as tf 
-from keras.optimizers import Adam, SGD, RMSprop
 import numpy as np
 import itertools
 import json
 import gc
 import scalogram_cnn_project.settings.config as config
+import yaml
+
 from scalogram_cnn_project.utils.dict_product import dict_product
-from scalogram_cnn_project.utils.dict_to_str import dict_to_str
+from scalogram_cnn_project.utils.simplify_config_space import simplify_config_space
+
 
 ############################################################################
-## Model Creators, Model Runners and Optimizers
+## Model Creators and Model Runners
 ############################################################################
 
 from scalogram_cnn_project.models import model_v0, model_v1, model_v2
@@ -28,12 +30,6 @@ MODEL_RUNNERS = {
     "v2": model_runner_v2.run_model,
 }
 
-OPTIMIZERS = {
-    "adam": Adam,
-    "sgd": SGD,
-    "rmsprop": RMSprop,
-}
-
 ############################################################################
 ## Logging
 ############################################################################
@@ -44,43 +40,32 @@ logging.getLogger("scalogram_cnn_project").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 ############################################################################
-## PARAMETERS
+## FILE PARAMETERS
 ############################################################################
 
-MODEL_RUNNER = "v2"
-MODEL = "v0"
-MODE = "separate"
-
-OVERLAP = 0.733
-CMAP = "gray"
-CHANNELS = ["C3", "C4", "Fz", "Cz", "Pz"]
-SUBJECTS = [1, 2, 3, 5, 6, 8, 13]
-
-INPUT_FOLDER = f"generated_scalograms_ALL_{CMAP}_overlap{OVERLAP}"
+INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
 OUTPUT_FOLDER = "useless"
-PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
+
+PROGRESS_FILE       = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
+PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
+PARAMS_FILE         =  config.PARAM_SEARCH_DIR / "cross_validation_loso_example.yaml"
+
 
 ############################################################################
 ## GRID PARAMETERS
 ############################################################################
 
-MODEL_HYPER_PARAMS = {
-    "epsilon": [1e-3],
-    "momentum": [0.99],
-    "cmap": [CMAP],
-    "channels": [CHANNELS],
-    "mode": [MODE],
-}
+MODEL_RUNNER = "v2"
+MODEL = "v0"
 
-MODEL_TRAIN_PARAMS = {
-    "learning_rate": [1e-3],
-    "batch_size": [32],
-    "seed": [42],
-    "overlap": [OVERLAP],
-    "optimizer_name": ["adam"],
-    "subjects": [SUBJECTS],
-    "loso_subject": SUBJECTS
-}
+
+with open(PARAMS_FILE) as f:
+    config_params = yaml.safe_load(f)
+
+MODEL_HYPER_PARAMS = simplify_config_space(config_params["MODEL_HYPER_PARAMS"])
+MODEL_TRAIN_PARAMS = simplify_config_space(config_params["MODEL_TRAIN_PARAMS"])
+
+
 
 ############################################################################
 ## MAIN
@@ -88,107 +73,113 @@ MODEL_TRAIN_PARAMS = {
 
 if __name__ == "__main__":
 
-    # =====================================
-    # LOAD MODEL CREATOR AND MODEL RUNNER
-    # =====================================
-
     run_model = MODEL_RUNNERS[MODEL_RUNNER]
     create_model = MODEL_CREATORS[MODEL]
 
-    # ==============================
-    # LOAD PROGRESS
-    # ==============================
-
     results = {}
+
     PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     if PROGRESS_FILE.exists():
         with open(PROGRESS_FILE, "r") as f:
             results = json.load(f)
+
         logger.info("Resuming experiment. %d configs already done.", len(results))
 
     # ====================================
-    # CREATING A GRID OF PARAMS
+    # CREATE PARAMETER GRID
     # ====================================
-
 
     train_configs = list(dict_product(MODEL_TRAIN_PARAMS))
     model_configs = list(dict_product(MODEL_HYPER_PARAMS))
 
     grid_params = []
+    param_registry = {}
+
+    model_id_counter = 0
 
     for model_hp, train_hp in itertools.product(
         model_configs,
         train_configs
     ):
+
         params = {}
 
-        # Model hyperparameters
         params.update(model_hp)
-
-        # Training parameters
         params.update(train_hp)
 
-        # Optimizer
-        opt_name = train_hp["optimizer_name"]
-        opt_class = OPTIMIZERS[opt_name]
+        # Generate model ID
+        model_id = f"model_{model_id_counter:05d}"
+        model_id_counter += 1
 
-        params.update({
-            "optimizer": opt_class(learning_rate=train_hp["learning_rate"])
-        })
+        params["model_id"] = model_id
 
-        model_str = dict_to_str(model_hp)
-        train_str = dict_to_str(train_hp)
-        parts = [train_str, model_str]
-        params["model_name"] = "_".join(p for p in parts if p)
+        # Save parameters to registry
+        serializable_params = {
+            **model_hp,
+            **train_hp
+        }
+
+        param_registry[model_id] = serializable_params
 
         grid_params.append(params)
 
+    # ====================================
+    # SAVE PARAM REGISTRY
+    # ====================================
 
-    # ==============================
+    with open(PARAM_REGISTRY_FILE, "w") as f:
+
+        param_registry["MODEL"] = MODEL
+        param_registry["MODEL_RUNNER"] = MODEL_RUNNER
+        param_registry["INPUT_FOLDER"] = INPUT_FOLDER
+
+        json.dump(param_registry, f, indent=2)
+
+    # ====================================
     # GRID SEARCH LOOP
-    # ==============================
-
+    # ====================================
 
     for params in grid_params:
-        
-        model_name = params["model_name"]
 
-        if model_name in results:
-            logger.info("Skipping %s (already completed)", model_name)
+        model_id = params["model_id"]
+
+        if model_id in results:
+            logger.info("Skipping %s (already completed)", model_id)
             continue
 
-        logger.info("Running %s", model_name)
+        logger.info("Running %s", model_id)
 
         try:
+
             model, callback = create_model(params)
 
             acc = run_model(
-                model=model, 
+                model=model,
                 callback=callback,
                 parameters=params,
                 input_folder=config.DATA_DIR / INPUT_FOLDER,
                 output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
             )
+
         except Exception as e:
-            logger.error("Error in %s: %s", model_name, e)
+
+            logger.error("Error in %s: %s", model_id, e)
             acc = None
 
-
-        # SAVE PROGRESS IMMEDIATELY
-        results[model_name] = acc
+        # Save progress
+        results[model_id] = acc
 
         with open(PROGRESS_FILE, "w") as f:
             json.dump(results, f, indent=2)
 
-        # CLEAN MEMORY
+        # Clean memory
         tf.keras.backend.clear_session()
         gc.collect()
 
-
-    # ==============================
+    # ====================================
     # FINAL STATS
-    # ==============================
+    # ====================================
 
     valid_results = [v for v in results.values() if v is not None]
     mean = sum(valid_results) / len(valid_results) if valid_results else None

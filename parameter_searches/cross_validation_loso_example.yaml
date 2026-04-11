@@ -1,0 +1,54 @@
+MODEL_HYPER_PARAMS:
+
+  epsilon:
+    mode: fixed
+    values: [0.001]
+
+  momentum:
+    mode: fixed
+    values: [0.99]
+
+  cmap:
+    mode: fixed
+    values: ["gray"]
+
+  channels:
+    mode: fixed
+    values:
+      - ["C3", "C4", "Fz", "Cz", "Pz"]
+
+  mode:
+    mode: fixed
+    values: ["separate"]
+
+
+MODEL_TRAIN_PARAMS:
+
+  learning_rate:
+    mode: fixed
+    values: [0.001]
+
+  batch_size:
+    mode: fixed
+    values: [32]
+
+  seed:
+    mode: fixed
+    values: [42]
+
+  overlap:
+    mode: fixed
+    values: [0.733]
+
+  optimizer_name:
+    mode: fixed
+    values: ["adam"]
+
+  subjects:
+    mode: fixed
+    values:
+      - [1, 2, 3, 5, 6, 8, 13]
+
+  loso_subject:
+    mode: choice
+    values: [1, 2, 3, 5, 6, 8, 13]
