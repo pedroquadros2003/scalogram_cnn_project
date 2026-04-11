@@ -11,9 +11,9 @@ venv_wsl/
 outputs/*
 !outputs/.gitkeep
 
-#data/*
-#!data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/
-#!data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/*
+data/*
+!data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/
+!data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/**
 
 parameter_searches/*
 !parameter_searches/cross_validation_loso_example.yaml
