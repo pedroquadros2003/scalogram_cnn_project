@@ -19,3 +19,5 @@ parameter_searches/*
 !parameter_searches/cross_validation_loso_example.yaml
 !parameter_searches/gridsearch_example.yaml
 !parameter_searches/keras_search_example.yaml
+
+helpful_additionals/*
