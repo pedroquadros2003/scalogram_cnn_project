@@ -55,11 +55,10 @@ logger = logging.getLogger(__name__)
 ## FILE PARAMETERS
 ############################################################################
 
-INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
-OUTPUT_FOLDER = "tests_keras_tuner"
+INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
+OUTPUT_FOLDER = "keras_search"
 
 PARAMS_FILE = config.PARAM_SEARCH_DIR / "keras_search_example.yaml"
-RESULTS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "best_trials.txt"
 
 ############################################################################
 ## SEARCH PARAMETERS
@@ -69,7 +68,7 @@ MODEL =  "v2"
 MODEL_RUNNER = "v1"
 
 ## MAX_TRIALS is the number of different models tested
-MAX_TRIALS = 50
+MAX_TRIALS = 200
 
 with open(PARAMS_FILE) as f:
     config_params = yaml.safe_load(f)
@@ -146,7 +145,7 @@ if __name__ == "__main__":
 
     best_trials = tuner.oracle.get_best_trials(num_trials=10)
 
-    with open(RESULTS_FILE, "w") as f:
+    with open(config.OUTPUT_DIR / OUTPUT_FOLDER / "best_trials.txt", "w") as f:
 
         for i, trial in enumerate(best_trials):
 

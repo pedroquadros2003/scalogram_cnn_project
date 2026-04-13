@@ -17,7 +17,6 @@ class CustomTuner(kt.RandomSearch):
         self.model_train_params = model_train_params
         self.create_model = create_model
         self.run_model = run_model
-        self.model_id_counter = 0
         super().__init__(*args, **kwargs)
 
 
@@ -47,8 +46,7 @@ class CustomTuner(kt.RandomSearch):
         params = {}
 
         # Create Model ID
-        model_id = f"model_{self.model_id_counter:05d}"
-        self.model_id_counter += 1
+        model_id = f"model_{trial.trial_id}"
         params["model_id"] = model_id
 
         ## Add to params the parameters that will be optimized by Keras Tuner
