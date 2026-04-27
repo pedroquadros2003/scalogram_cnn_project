@@ -31,7 +31,7 @@ OPTIMIZERS = {
 def create_model(parameters):
 
     REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
-    REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode"]
+    REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "from_logit"]
 
 
     logger.info("Validating training parameters...")
@@ -53,6 +53,7 @@ def create_model(parameters):
     momentum = parameters["momentum"]
     cmap = parameters["cmap"]
     mode = parameters["mode"]
+    from_logit = parameters["from_logit"]
 
 
     color_channels_per_image = 1 if cmap == "gray" else 3
@@ -91,15 +92,19 @@ def create_model(parameters):
     model.add(Flatten()),
     model.add(Dense(128, activation='relu')),
     model.add(Dropout(0.5, seed = seed)),
-    model.add(Dense(1))
+    
+    if from_logit:
+        model.add(Dense(1))
+    else:
+        model.add(Dense(1, activation='sigmoid'))
 
 
     metrics=[
-            BinaryAccuracy(threshold=0.0, name="accuracy"),
+            BinaryAccuracy(threshold=0.0 if from_logit else 0.5, name="accuracy"),
             ]
 
     model.compile(optimizer=optimizer,
-                loss=BinaryCrossentropy(from_logits=True),
+                loss=BinaryCrossentropy(from_logits=from_logit),
                 metrics = metrics
                 )
 
@@ -124,9 +129,14 @@ if __name__ == "__main__":
     params["seed"] = 42
     params["epsilon"] = 1e-3
     params["momentum"] = 0.99
-    params["optimizer"] = Adam(learning_rate = 0.001)
+    params["optimizer_name"] = "adam"
+    params["batch_size"] = 32
+    params["subjects"] = [1, 2, 3]
+    params["overlap"] = 0.733
+    params["learning_rate"] = 0.001
     params["cmap"] = "gray"
     params["mode"] = "mix"
+    params["from_logit"] = True
     
 
     model, callback = create_model(params)

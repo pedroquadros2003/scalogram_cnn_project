@@ -21,6 +21,10 @@ MODEL_HYPER_PARAMS:
     mode: fixed
     values: ["separate"]
 
+  from_logit:
+    mode: fixed
+    values: [False]
+
 
 MODEL_TRAIN_PARAMS:
 

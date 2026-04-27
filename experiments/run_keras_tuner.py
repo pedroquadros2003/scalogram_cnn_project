@@ -150,7 +150,7 @@ if __name__ == "__main__":
         for i, trial in enumerate(best_trials):
 
             line = (
-                f"Rank {i} | val_loss={trial.score:.5f} | "
+                f"Rank {i} | Trial ID: {trial.trial_id} | val_loss={trial.score:.5f} | "
                 f"params={trial.hyperparameters.values}"
             )
 

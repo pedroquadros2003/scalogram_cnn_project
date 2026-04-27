@@ -32,7 +32,7 @@ def create_model(parameters):
     REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
     REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", \
                             "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
-                            "first_layer_num_filters", "second_layer_num_filters", ]
+                            "first_layer_num_filters", "second_layer_num_filters", "from_logit"]
 
 
     logger.info("Validating training parameters...")
@@ -61,6 +61,7 @@ def create_model(parameters):
     num_neurons_dense = parameters["num_neurons_dense"]
     first_layer_num_filters = parameters["first_layer_num_filters"]
     second_layer_num_filters = parameters["second_layer_num_filters"]
+    from_logit = parameters["from_logit"]
 
 
 
@@ -119,15 +120,19 @@ def create_model(parameters):
     model.add(Flatten()),
     model.add(Dense(num_neurons_dense, activation='relu')),
     model.add(Dropout(0.7, seed = seed)),
-    model.add(Dense(1))
+    
+    if from_logit:
+        model.add(Dense(1))
+    else:
+        model.add(Dense(1, activation='sigmoid'))
 
 
     metrics=[
-            BinaryAccuracy(threshold=0.0, name="accuracy"),
+            BinaryAccuracy(threshold=0.0 if from_logit else 0.5, name="accuracy"),
             ]
 
     model.compile(optimizer=optimizer,
-                loss=BinaryCrossentropy(from_logits=True),
+                loss=BinaryCrossentropy(from_logits=from_logit),
                 metrics = metrics
                 )
 
@@ -154,9 +159,14 @@ if __name__ == "__main__":
     params["seed"] = 42
     params["epsilon"] = 1e-3
     params["momentum"] = 0.99
-    params["optimizer"] = Adam(learning_rate = 0.001)
+    params["optimizer_name"] = "adam"
+    params["batch_size"] = 32
+    params["subjects"] = [1, 2, 3]
+    params["overlap"] = 0.733
+    params["learning_rate"] = 0.001
     params["cmap"] = "gray"
     params["mode"] = "mix"
+    params["from_logit"] = False
 
 
     params["extra_layer"] = True
