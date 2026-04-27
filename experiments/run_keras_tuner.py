@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 ############################################################################
 
 INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
-OUTPUT_FOLDER = "keras_search"
+OUTPUT_FOLDER = "keras_search_temp"
 
 PARAMS_FILE = config.PARAM_SEARCH_DIR / "keras_search_example.yaml"
 
@@ -68,7 +68,7 @@ MODEL =  "v2"
 MODEL_RUNNER = "v1"
 
 ## MAX_TRIALS is the number of different models tested
-MAX_TRIALS = 200
+MAX_TRIALS = 3
 
 with open(PARAMS_FILE) as f:
     config_params = yaml.safe_load(f)

@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 ## FILE PARAMETERS
 ############################################################################
 
-INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
+INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
 OUTPUT_FOLDER = "useless"
 
 PROGRESS_FILE       = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
             model, callback = create_model(params)
 
-            acc = run_model(
+            acc, _ = run_model(
                 model=model,
                 callback=callback,
                 parameters=params,

@@ -76,7 +76,7 @@ class CustomTuner(kt.RandomSearch):
 
         try:
 
-            score = self.run_model(
+            _, history = self.run_model(
                 model=model,
                 callback=callback,
                 parameters=params,
@@ -84,22 +84,24 @@ class CustomTuner(kt.RandomSearch):
                 output_folder=self.output_folder,
             )
 
+            val_loss = history.history["val_loss"][-1]
+
         except Exception as e:
 
             logger.error("Trial failed: %s", e)
 
-            score = None
+            val_loss = None
 
         # ======================================
         # REPORT RESULT
         # ======================================
 
-        if score is None:
-            score = float("inf")
+        if val_loss is None:
+            val_loss = float("inf")
 
         self.oracle.update_trial(
             trial.trial_id,
-            {"val_loss": score},
+            {"val_loss": val_loss},
         )
 
         self.save_model(trial.trial_id, model)

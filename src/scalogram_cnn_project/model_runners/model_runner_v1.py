@@ -28,6 +28,8 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     overlap = parameters["overlap"]
     mode = parameters["mode"]
     subjects = parameters["subjects"]
+    from_logit = parameters["from_logit"]
+
 
     additional_features = False
     if "n_additional_features" in parameters:
@@ -80,7 +82,10 @@ def run_model(parameters, model, callback, input_folder, output_folder):
                         )
 
 
-    predictions = tf.math.sigmoid( model.predict(x_test) ).numpy()
+    if from_logit:
+       predictions = tf.math.sigmoid( model.predict(x_test) ).numpy()
+    else:
+       predictions = model.predict(x_test)
 
     error_classification = []
 
@@ -109,6 +114,4 @@ def run_model(parameters, model, callback, input_folder, output_folder):
         plt.savefig(output_folder / f"{model_id}_{title}.png")
         plt.close()
 
-
-    return final_accuracy
-
+    return final_accuracy, history

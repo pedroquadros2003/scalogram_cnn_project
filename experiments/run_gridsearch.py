@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 ## FILE PARAMETERS
 ############################################################################
 
-INPUT_FOLDER  = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
+INPUT_FOLDER  = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
 OUTPUT_FOLDER = "useless"
 PARAMS_FILE   =  config.PARAM_SEARCH_DIR / "gridsearch_example.yaml"
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         try:
             model, callback = create_model(params)
 
-            acc = run_model(
+            acc, _ = run_model(
                 model=model, 
                 callback=callback,
                 parameters=params,

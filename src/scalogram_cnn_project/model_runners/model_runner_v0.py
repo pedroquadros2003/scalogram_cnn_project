@@ -32,6 +32,8 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     batch_size = parameters["batch_size"]
     mode = parameters["mode"]
     subjects = parameters["subjects"]
+    from_logit = parameters["from_logit"]
+
 
     additional_features = False
     if "n_additional_features" in parameters:
@@ -74,7 +76,10 @@ def run_model(parameters, model, callback, input_folder, output_folder):
                         )
 
 
-    predictions = tf.math.sigmoid( model.predict(x_test) ).numpy()
+    if from_logit:
+       predictions = tf.math.sigmoid( model.predict(x_test) ).numpy()
+    else:
+       predictions = model.predict(x_test)
 
     error_classification = []
 
@@ -104,4 +109,4 @@ def run_model(parameters, model, callback, input_folder, output_folder):
         plt.close()
 
 
-    return final_accuracy
+    return final_accuracy, history

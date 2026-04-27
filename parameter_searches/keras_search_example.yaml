@@ -51,7 +51,7 @@ MODEL_HYPER_PARAMS:
 
   from_logit:
     mode: fixed
-    values: [False]
+    values: [True]
 
 
 MODEL_TRAIN_PARAMS:
