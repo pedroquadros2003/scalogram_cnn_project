@@ -64,6 +64,10 @@ MODEL_TRAIN_PARAMS:
     mode: int_interval
     values: [16, 128]
 
+  label_smoothing:
+    mode: fixed
+    values: [0.0]
+
   seed:
     mode: fixed
     values: [42]

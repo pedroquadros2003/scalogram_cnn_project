@@ -29,7 +29,7 @@ OPTIMIZERS = {
 
 def create_model(parameters):
 
-    REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
+    REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate", "label_smoothing"]
     REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", \
                             "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
                             "first_layer_num_filters", "second_layer_num_filters", "from_logit"]
@@ -40,6 +40,7 @@ def create_model(parameters):
 
 
     seed = parameters["seed"]
+    label_smoothing = parameters["label_smoothing"]
 
     # Optimizer
     opt_name = parameters["optimizer_name"]
@@ -132,7 +133,7 @@ def create_model(parameters):
             ]
 
     model.compile(optimizer=optimizer,
-                loss=BinaryCrossentropy(from_logits=from_logit),
+                loss=BinaryCrossentropy(from_logits=from_logit, label_smoothing=label_smoothing),
                 metrics = metrics
                 )
 
@@ -167,6 +168,7 @@ if __name__ == "__main__":
     params["cmap"] = "gray"
     params["mode"] = "mix"
     params["from_logit"] = False
+    params["label_smoothing"] = 0.0
 
 
     params["extra_layer"] = True

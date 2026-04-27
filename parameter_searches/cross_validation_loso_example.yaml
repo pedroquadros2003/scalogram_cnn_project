@@ -36,6 +36,10 @@ MODEL_TRAIN_PARAMS:
     mode: fixed
     values: [32]
 
+  label_smoothing:
+    mode: fixed
+    values: [0.0]
+
   seed:
     mode: fixed
     values: [42]
