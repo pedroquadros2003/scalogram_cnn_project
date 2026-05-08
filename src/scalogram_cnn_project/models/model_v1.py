@@ -29,7 +29,7 @@ OPTIMIZERS = {
 
 def create_model(parameters):
 
-    REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate", "label_smoothing"]
+    REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate", "label_smoothing", "num_epochs"]
     REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", \
                             "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
                             "first_layer_num_filters", "second_layer_num_filters", "from_logit"]

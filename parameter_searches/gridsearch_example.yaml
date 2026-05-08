@@ -84,3 +84,7 @@ MODEL_TRAIN_PARAMS:
   optimizer_name:
     mode: fixed
     values: ["sgd"]
+
+  num_epochs:
+    mode: fixed
+    values: [50]

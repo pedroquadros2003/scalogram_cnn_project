@@ -84,3 +84,7 @@ MODEL_TRAIN_PARAMS:
   optimizer_name:
     mode: choice
     values: ["adam", "sgd", "rmsprop"]
+
+  num_epochs:
+    mode: fixed
+    values: [50]

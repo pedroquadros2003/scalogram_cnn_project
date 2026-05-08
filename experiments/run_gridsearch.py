@@ -55,8 +55,8 @@ logger = logging.getLogger(__name__)
 ############################################################################
 
 INPUT_FOLDER  = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
-OUTPUT_FOLDER = "useless"
-PARAMS_FILE   =  config.PARAM_SEARCH_DIR / "gridsearch_example.yaml"
+OUTPUT_FOLDER = "gridsearch_keras_trial315"
+PARAMS_FILE   =  config.PARAM_SEARCH_DIR / "gridsearch_keras_trial315.yaml"
 
 
 PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"

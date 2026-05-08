@@ -28,6 +28,7 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     mode = parameters["mode"]
     subjects = parameters["subjects"]
     from_logit = parameters["from_logit"]
+    num_epochs = parameters["num_epochs"]
 
     additional_features = False
     if "n_additional_features" in parameters:
@@ -57,7 +58,7 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     )
 
     history = model.fit(x = x_train, y = y_train,
-                        epochs=50,
+                        epochs=num_epochs,
                         batch_size=batch_size, 
                         validation_data=(x_test, y_test),
                         callbacks=[callback],
