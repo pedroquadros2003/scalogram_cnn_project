@@ -1,18 +1,18 @@
 ## We begin by importing the necessary Python modules:
 
 import numpy as np
-import mne
+from scipy.io import loadmat
 import pywt
 from scipy.signal import butter, filtfilt, welch
 import cv2
-from scalogram_cnn_project.utils.make_hash_id import make_hash_id
 import json
-
 from pathlib import Path
 import scalogram_cnn_project.settings.config as config
+from scalogram_cnn_project.utils.make_hash_id import make_hash_id
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 ## Defining the Butterworth filter
 
@@ -27,49 +27,58 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=4):
     b, a = butter_bandpass(lowcut, highcut, fs, order=order)
     return filtfilt(b, a, data)
 
-## Defining the function that calculates the band power
 
+## Defining the function that calculates the band power
 def bandpower(f, psd, fmin, fmax):
     mask = (f >= fmin) & (f <= fmax)
     return np.trapezoid(psd[mask], f[mask])
 
 
-def generate_scalogram_and_biomarkers(
-        subject = 1, session = 1, channel = "Fz",
+
+def generate_scalogram(
+        subject = 1,
+        channel = "O1",
         images_dir = config.OUTPUT_DIR / f'subject1_session1_channelFz',
         sample_file_path = config.OUTPUT_DIR / f'subject1_session1_channelFz' / "samples.jsonl",
-        drowsiness_threshold=4,
         cmap="gray",
         freq_min=3, freq_max=30,
-        do_resampling = False,
-        resample_freq = 128.0,
-        epoch_duration = 30.0, 
-        ## Determines the overlap between epochs
-        overlap_ratio=0.733,
-        wavelet_type = 'morl',
+        epoch_duration = 8.0, 
+        wavelet_type = 'morl', 
         ## Final sized of the scalogram, designed to be input of a CNN-2D
         final_width_px = 64,
         final_height_px = 64,
 ):
+    
+    subject_file = config.seed_vig_filenames[subject]
 
-    ## Importing the edf file
-    sample_data_folder = config.DROZY_DIR
-    sample_data_raw_file = (
-        sample_data_folder / "psg" / f"{subject}-{session}.edf"
-    )
-    raw = mne.io.read_raw_edf(sample_data_raw_file)
-    if do_resampling: raw.resample(resample_freq)
+    # 1. Load Data
+    sample_data_raw_file = config.SEED_VIG_DIR / subject_file
+    
+    logger.info(f"Loading: {sample_data_raw_file}")
 
-    raw_signal = raw.pick(picks = channel).get_data()
-    sfreq = raw.info["sfreq"]
-    tot_samples = raw.n_times
-    del raw
+    mat = loadmat(sample_data_raw_file, squeeze_me=True, struct_as_record=False)
+    EEG = mat["EEG"]
+    del mat
 
+    channel_list = list(EEG.chn)
+    sfreq = EEG.sample_rate
 
+    # 2. Preprocessing (Channel Selection & Filtering)
 
-    # Applying the filter to the data
-    filtered_signal = butter_bandpass_filter(raw_signal[0,:],freq_min, freq_max, sfreq, order=4)
+    try:
+        channel_index = channel_list.index(channel)
+    except ValueError:
+        logger.warning(f"Channel '{channel}' not found in SEED-VIG channel list. Defaulting to first channel.")
+        channel_index = 0
+
+    raw_signal = EEG.data[:, channel_index]
+    tot_samples=raw_signal.shape[0]
+    del EEG
+
+    # Apply bandpass filter to the selected channel
+    filtered_signal = butter_bandpass_filter(raw_signal, freq_min, freq_max, sfreq, order=4)
     del raw_signal
+
 
     ## Creating a directory for saving the images
     Path(images_dir).mkdir(parents=True, exist_ok=True)
@@ -77,34 +86,39 @@ def generate_scalogram_and_biomarkers(
 
     ## Converting epoch_duration and step_duration to number of samples
     epoch_sample_duration = int(epoch_duration * sfreq)
-    step_sample_duration = int(epoch_duration * (1 - overlap_ratio) * sfreq)
-
     epoch_index = int(0)
 
+    ## Load the label file based on PERCLOS
+    perclos_label_file = config.SEED_VIG_LABELS / subject_file
+    mat = loadmat(perclos_label_file, squeeze_me=True, struct_as_record=False)
+    perclos_label = mat["perclos"]
+    del mat
 
     ## These are the frequencies and scales we are going to use for the CWT operation
     freqs = np.linspace(freq_min, freq_max, 256)
     scales = pywt.frequency2scale(wavelet_type, freqs * 1/sfreq)
 
-
     ## Create a list of numpy arrays, each with three features extracted from each epoch
     feature_np_list = []
 
-    while  epoch_index*step_sample_duration + epoch_sample_duration < tot_samples :
-        logger.info(f"{epoch_index*step_sample_duration + epoch_sample_duration} < {tot_samples}?")
+    while  epoch_index*epoch_sample_duration + epoch_sample_duration < tot_samples :
+        logger.info(f"{epoch_index*epoch_sample_duration + epoch_sample_duration} < {tot_samples}?")
 
-        ## Now, we compute the CWT coefficients in dB
+        
+        start_sample = epoch_index*epoch_sample_duration
+        end_sample  = start_sample+ epoch_sample_duration
 
-        window = filtered_signal[ epoch_index*step_sample_duration : epoch_index*step_sample_duration  + epoch_sample_duration]
+        window = filtered_signal[ start_sample : end_sample ]
+
 
         coef, _ = pywt.cwt(window, scales, wavelet_type, sampling_period=1/sfreq)
         power = np.abs(coef)**2
-        power_db = 10 * np.log10(power + 1e-9) 
+
 
         # Normalize power_db between [0, 255]
-        vmin = np.percentile(power_db, 20)
-        vmax = np.percentile(power_db, 99)
-        img = np.clip(power_db, vmin, vmax)
+        vmin = np.percentile(power, 20)
+        vmax = np.percentile(power, 99)
+        img = np.clip(power, vmin, vmax)
         img = (img - vmin) / (vmax - vmin)
         img = (img * 255).astype(np.uint8)
 
@@ -116,13 +130,10 @@ def generate_scalogram_and_biomarkers(
         img_resized = np.flipud(img_resized)  
 
 
-        ## Prior to saving the image, we build a dict with all relevant information and create a hash_id from it
-        drowsiness_level = 1 if config.drozy_kss_scale[subject][session]>=drowsiness_threshold else 0
 
         sample_entry = {
-            "label": int(drowsiness_level),
-            "subject": subject,
-            "session": session,
+            "label": round(perclos_label[epoch_index]),
+            "subject_file": subject_file,
             "epoch": epoch_index,
             "channel": channel
         }
@@ -136,15 +147,17 @@ def generate_scalogram_and_biomarkers(
         ## Finally, we save the image as gray scale
         cv2.imwrite(str(images_dir / fig_name), img_resized)
 
+
         ## And save the in .jsonl file the relation between each hash_id and its metadata
         with open(sample_file_path, "a") as f:
             f.write(json.dumps(sample_entry) + "\n")
 
 
+
         ## Next, we comput the PSD and relative power of each important frequency band
         f, psd = welch(
             window,
-            fs=resample_freq,
+            fs=sfreq,
             nperseg=256,
             noverlap=128
         )
@@ -168,12 +181,7 @@ def generate_scalogram_and_biomarkers(
     features_norm = (features - features_min) / (features_max - features_min + 1e-8)
     return features_norm
 
-
 if __name__ == "__main__": 
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(levelname)s:%(name)s:%(message)s"
-    )
-
-    logger.debug( generate_scalogram_and_biomarkers() )
+    logging.basicConfig(level=logging.INFO)
+    
+    generate_scalogram()

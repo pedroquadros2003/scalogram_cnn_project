@@ -1,5 +1,5 @@
 import scalogram_cnn_project.settings.config as config
-from scalogram_cnn_project.scalogram_generation.generator_scalogram_batch_and_biomarkers import generate_scalogram_and_biomarkers
+from scalogram_cnn_project.scalogram_generation_drozy.generator_scalogram_batch_and_biomarkers import generate_scalogram_and_biomarkers
 import json
 import numpy as np
 import logging

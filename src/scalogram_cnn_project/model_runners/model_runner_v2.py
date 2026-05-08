@@ -2,12 +2,14 @@ import tensorflow as tf
 from scalogram_cnn_project.utils.train_test_splitter_in_subjects import train_test_split
 import numpy as np
 import matplotlib
+
+from scalogram_cnn_project.utils_drozy import load_data_separate
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
 
-from scalogram_cnn_project.utils import load_data_mix, load_data_separate
+from scalogram_cnn_project.utils_drozy import load_data_mix
 
 loaders = {
     "mix": load_data_mix.load_data,

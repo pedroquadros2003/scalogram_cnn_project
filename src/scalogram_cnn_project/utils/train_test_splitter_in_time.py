@@ -101,7 +101,7 @@ def train_test_split(X, y, test_size, random_state, overlap, subject_array, epoc
 
 if __name__ == "__main__":
 
-    from scalogram_cnn_project.utils.load_data_separate import load_data
+    from scalogram_cnn_project.utils_drozy.load_data_separate import load_data
     import scalogram_cnn_project.settings.config as config
 
     logging.basicConfig(

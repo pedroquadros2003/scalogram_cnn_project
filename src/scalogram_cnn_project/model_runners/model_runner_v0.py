@@ -7,12 +7,14 @@ from scalogram_cnn_project.utils.generic_operations_list_of_numpy import index_X
 from pathlib import Path
 import numpy as np
 import matplotlib
+
+from scalogram_cnn_project.utils_drozy import load_data_separate
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
 
 
-from scalogram_cnn_project.utils import load_data_mix, load_data_separate
+from scalogram_cnn_project.utils_drozy import load_data_mix
 
 loaders = {
     "mix": load_data_mix.load_data,
