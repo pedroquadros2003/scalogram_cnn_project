@@ -20,8 +20,10 @@ def train_test_split_aux(X, y, test_size, random_state, overlap, neglected_epoch
     # Number of epochs to discard to avoid temporal leakage caused by overlapping windows
     # Example: overlap=0.85 -> discard ~7 epochs
     neglected_epochs =  ceil( 1/ (1-overlap) * neglected_epochs_step)
-    
-    x_train = slice_X(X, 0, threshold_epochs)
+
+    ## The number of epochs x_train includes is 'threshold_epochs', from 0 to threshold_epochs-1
+    x_train = slice_X(X, 0, threshold_epochs)  
+    ## x_test starts from threshold_epochs + neglected_epochs to the end
     x_test  = slice_X(X, threshold_epochs + neglected_epochs, None)
     y_train = y[ :threshold_epochs, ...]
     y_test  = y[ threshold_epochs + neglected_epochs: , ...]

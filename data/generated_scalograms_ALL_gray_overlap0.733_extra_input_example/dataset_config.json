@@ -1,4 +1,5 @@
 {
+  "dataset": "DROZY",
   "scalogram": {
     "freq_min": 3,
     "freq_max": 30,

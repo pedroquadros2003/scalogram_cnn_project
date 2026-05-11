@@ -2,19 +2,36 @@ import tensorflow as tf
 from scalogram_cnn_project.utils.train_test_splitter_in_time import train_test_split
 import numpy as np
 import matplotlib
-
-from scalogram_cnn_project.utils_drozy import load_data_separate
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
+import json
 
-from scalogram_cnn_project.utils_drozy import load_data_mix
 
-loaders = {
-    "mix": load_data_mix.load_data,
-    "separate": load_data_separate.load_data,
+from scalogram_cnn_project.utils_drozy import (
+    load_data_mix as drozy_mix,
+    load_data_separate as drozy_sep
+)
+
+from scalogram_cnn_project.utils_seed_vig import (
+    load_data_mix as seedvig_mix,
+    load_data_separate as seedvig_sep
+)
+
+
+LOADERS = {
+    "DROZY": {
+        "mix": drozy_mix.load_data,
+        "separate": drozy_sep.load_data,
+    },
+
+    "SEED-VIG": {
+        "mix": seedvig_mix.load_data,
+        "separate": seedvig_sep.load_data,
+    }
 }
+
 
 
 import logging
@@ -45,8 +62,18 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     #tf.config.experimental.enable_op_determinism()
 
 
-    load_data = loaders[mode]
+    ## Determining the dataset from which the scalograms are
 
+    dataset_config_path = input_folder / "dataset_config.json"
+
+    with open(dataset_config_path) as f:
+        dataset_config = json.load(f)
+
+    dataset_name = dataset_config["dataset"]
+
+    load_data = LOADERS[dataset_name][mode]
+
+    ## Loading data with the appropriate loader
     X, y, Subject_array, Epoch_array = load_data(folder_path=input_folder,
                        channels=channels,
                        cmap=cmap,
@@ -54,16 +81,27 @@ def run_model(parameters, model, callback, input_folder, output_folder):
                        additional_features=additional_features)
 
 
-    ## As mix version of the model does not differentiate channels,
-    ## it is necessary to have a greater step for neglected epochs
-    ## in order to skip the right amount of epochs for every channel.
+    ## Adjusting 'neglected_epochs_step' due to the existence of overlap in some datasets
+
     neglected_epochs_step = 1 
-    if mode == "separate":
-        neglected_epochs_step = 1
-    elif mode == "mix":
-        neglected_epochs_step = len(channels)
+
+    if dataset_name == "SEED-VIG":
+       neglected_epochs_step = 0
+
+    if dataset_name == "DROZY":
+
+        ## As mix version of the model does not differentiate channels,
+        ## it is necessary to have a greater step for neglected epochs
+        ## in order to skip the right amount of epochs for every channel.
+        if mode == "separate":
+            neglected_epochs_step = 1
+        elif mode == "mix":
+            neglected_epochs_step = len(channels)
+    
     else:
-       neglected_epochs_step = 1 
+       
+       raise ValueError("There is no implemented support for the dataset: %s", dataset_name)
+
 
 
     x_train, x_test, y_train, y_test = train_test_split(

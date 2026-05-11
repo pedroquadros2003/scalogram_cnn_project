@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import scalogram_cnn_project.settings.config as config
 from scalogram_cnn_project.utils.make_hash_id import make_hash_id
+from matplotlib import colormaps
 
 import logging
 logger = logging.getLogger(__name__)
@@ -134,6 +135,7 @@ def generate_scalogram(
         sample_entry = {
             "label": round(perclos_label[epoch_index]),
             "subject_file": subject_file,
+            "subject": subject,
             "epoch": epoch_index,
             "channel": channel
         }
@@ -144,8 +146,36 @@ def generate_scalogram(
         fig_name = f"{image_id}.png"
 
 
-        ## Finally, we save the image as gray scale
-        cv2.imwrite(str(images_dir / fig_name), img_resized)
+        # ---------------------------------
+        # APPLY COLORMAP
+        # ---------------------------------
+
+        if cmap == "gray":
+
+            img_to_save = img_resized
+
+        else:
+
+            # normalize to [0,1]
+            img_float = img_resized.astype(np.float32) / 255.0
+
+            # apply matplotlib colormap
+            cmap_fn = colormaps[cmap]
+
+            # RGBA output in [0,1]
+            colored = cmap_fn(img_float)
+
+            # remove alpha channel
+            colored = colored[..., :3]
+
+            # convert to uint8
+            colored = (255 * colored).astype(np.uint8)
+
+            # matplotlib gives RGB, OpenCV expects BGR
+            img_to_save = cv2.cvtColor(colored, cv2.COLOR_RGB2BGR)
+
+        # save image
+        cv2.imwrite(str(images_dir / fig_name), img_to_save)
 
 
         ## And save the in .jsonl file the relation between each hash_id and its metadata

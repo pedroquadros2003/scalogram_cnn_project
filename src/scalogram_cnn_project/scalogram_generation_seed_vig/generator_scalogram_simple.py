@@ -114,7 +114,7 @@ def generate_scalogram(subject = 1,
 
 
     # A corrected filename generation is needed for SEED-VIG data.
-    fig_name = f'subject_file{subject_file}_channel{channel}_epoch{epoch_index}.png'
+    fig_name = f'subject{subject}_channel{channel}_epoch{epoch_index}.png'
     save_path = config.OUTPUT_DIR / fig_name
     
     fig.savefig(save_path, dpi=dpi)

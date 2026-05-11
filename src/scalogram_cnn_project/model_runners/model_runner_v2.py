@@ -2,19 +2,35 @@ import tensorflow as tf
 from scalogram_cnn_project.utils.train_test_splitter_in_subjects import train_test_split
 import numpy as np
 import matplotlib
-
-from scalogram_cnn_project.utils_drozy import load_data_separate
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
+import json
 
-from scalogram_cnn_project.utils_drozy import load_data_mix
+from scalogram_cnn_project.utils_drozy import (
+    load_data_mix as drozy_mix,
+    load_data_separate as drozy_sep
+)
 
-loaders = {
-    "mix": load_data_mix.load_data,
-    "separate": load_data_separate.load_data,
+from scalogram_cnn_project.utils_seed_vig import (
+    load_data_mix as seedvig_mix,
+    load_data_separate as seedvig_sep
+)
+
+
+LOADERS = {
+    "DROZY": {
+        "mix": drozy_mix.load_data,
+        "separate": drozy_sep.load_data,
+    },
+
+    "SEED-VIG": {
+        "mix": seedvig_mix.load_data,
+        "separate": seedvig_sep.load_data,
+    }
 }
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -43,7 +59,19 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     #os.environ["TF_DETERMINISTIC_OPS"] = "1"
     #tf.config.experimental.enable_op_determinism()
 
-    load_data = loaders[mode]
+
+    ## Determining the dataset from which the scalograms are
+
+    dataset_config_path = input_folder / "dataset_config.json"
+
+    with open(dataset_config_path) as f:
+        dataset_config = json.load(f)
+
+    dataset_name = dataset_config["dataset"]
+
+    load_data = LOADERS[dataset_name][mode]
+
+    ## Loading data with the appropriate loader
 
     X, y, Subject_array, _= load_data(folder_path=input_folder,
                        channels=channels,
