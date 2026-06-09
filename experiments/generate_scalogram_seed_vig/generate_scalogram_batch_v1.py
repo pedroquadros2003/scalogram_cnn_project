@@ -105,6 +105,7 @@ if __name__ == "__main__":
             "scalogram": COMMON_PARAMS,
             "channels": CHANNELS,
             "subjects": SUBJECTS,
+            "rpca_preprocessing" : "none",
             "extra_input": True
         }
 

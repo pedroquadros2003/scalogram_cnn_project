@@ -35,7 +35,8 @@ def create_model(parameters):
     REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate", "label_smoothing", "num_epochs"]
     REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "n_additional_features", \
                             "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense", \
-                            "first_layer_num_filters", "second_layer_num_filters", "from_logit"]
+                            "first_layer_num_filters", "second_layer_num_filters", "from_logit", \
+                            "final_width_px", "final_height_px", "preprocessing"]
 
 
 
@@ -67,11 +68,18 @@ def create_model(parameters):
     second_layer_num_filters = parameters["second_layer_num_filters"]
     n_additional_features = parameters["n_additional_features"]
     from_logit = parameters["from_logit"]
-
+    final_width_px = parameters["final_width_px"]
+    final_height_px = parameters["final_height_px"]
+    preprocessing = parameters["preprocessing"]
 
 
     color_channels_per_image = 1 if cmap == "gray" else 3
-    mode_multiplier = 1 if mode == "mix" else len(channels)
+
+    if preprocessing == "rpca_juxtaposed" and mode == "separate":
+        mode_multiplier = 1
+        logger.warning("Separate mode doesn't work with rpca_juxtaposed, changing to 'mix' mode.")
+    else:
+        mode_multiplier = 1 if mode == "mix" else len(channels)
 
 
 
@@ -79,7 +87,7 @@ def create_model(parameters):
     # IMAGE INPUT BRANCH (CNN)
     # ------------------------------------------------------------------
 
-    image_input = Input(shape=(64, 64, mode_multiplier*color_channels_per_image), name="image_input")
+    image_input = Input(shape=(final_height_px, final_width_px, mode_multiplier*color_channels_per_image), name="image_input")
 
     x = Conv2D(first_layer_num_filters, (kernel_size,kernel_size), activation='relu')(image_input)
 
@@ -223,6 +231,9 @@ if __name__ == "__main__":
     params["second_layer_num_filters"] = 64
     params["kernel_size"] = 2
     params["num_neurons_dense"] = 128
+    params["final_width_px"] = 64
+    params["final_height_px"] = 64
+    params["preprocessing"] = "none"
 
     model, callback = create_model(params)
     model.summary()

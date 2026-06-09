@@ -67,7 +67,8 @@ if __name__ == "__main__":
             "dataset": "SEED-VIG",
             "scalogram": COMMON_PARAMS,
             "channels": CHANNELS,
-            "subjects": SUBJECTS
+            "subjects": SUBJECTS,
+            "rpca_preprocessing" : "none"
         }
 
         json.dump(config_dict, f, indent=2)

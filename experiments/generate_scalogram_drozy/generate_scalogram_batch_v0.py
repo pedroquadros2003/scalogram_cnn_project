@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 
 OVERLAP = 0.733
-CMAP = "gray" # gray 1 channel or viridis 3 channels RGB
+CMAP = "viridis" # gray 1 channel or viridis 3 channels RGB
 SUBJECTS = [1]
-SESSIONS = [1, 2, 3]
-CHANNELS = ["C3"] #["C3", "C4", "Fz", "Cz", "Pz"]
+SESSIONS = [1]
+CHANNELS = ["C3", "C4"] #["C3", "C4", "Fz", "Cz", "Pz"]
 
 
-OUTPUT_FOLDER = "use_less" # f"generated_scalograms_ALL_{CMAP}_overlap{OVERLAP}"
+OUTPUT_FOLDER = "useless_viridis" # f"generated_scalograms_ALL_{CMAP}_overlap{OVERLAP}"
 SAMPLE_FILE_PATH = config.OUTPUT_DIR / OUTPUT_FOLDER / "samples.jsonl"
 INDEX_FILE_PATH = config.OUTPUT_DIR / OUTPUT_FOLDER / "index.json" 
 DATASET_CONFIG_PATH = config.OUTPUT_DIR / OUTPUT_FOLDER / "dataset_config.json"
@@ -58,10 +58,12 @@ if __name__ == "__main__":
 
     with open(DATASET_CONFIG_PATH, "w") as f:
         config_dict = {
+            "dataset": "DROZY",
             "scalogram"  : COMMON_PARAMS,
             "subjects"   : list(SUBJECTS),
             "channels"   : list(CHANNELS),
             "sessions"   : list(SESSIONS),
+            "rpca_preprocessing" : "none",
             "extra_input": False
         }
         json.dump(config_dict, f, indent=2)

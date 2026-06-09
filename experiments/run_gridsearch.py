@@ -9,6 +9,7 @@ import json
 import gc
 import scalogram_cnn_project.settings.config as config
 import yaml
+import argparse
 
 from scalogram_cnn_project.utils.dict_product import dict_product
 from scalogram_cnn_project.utils.simplify_config_space import simplify_config_space
@@ -51,25 +52,27 @@ logger = logging.getLogger(__name__)
 
 
 ############################################################################
-## FILE PARAMETERS
+## PARSER CONFIGURATION
 ############################################################################
 
-INPUT_FOLDER  = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
-OUTPUT_FOLDER = "gridsearch_keras_trial315"
-PARAMS_FILE   =  config.PARAM_SEARCH_DIR / "gridsearch_keras_trial315.yaml"
+parser = argparse.ArgumentParser(description="Run Grid Search Experiment")
+parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name inside DATA_DIR")
+parser.add_argument("--output_folder", type=str, default="generic_example", help="Output folder name inside OUTPUT_DIR")
+parser.add_argument("--params_file", type=str, default="gridsearch_example.yaml", help="YAML parameters file name inside PARAM_SEARCH_DIR")
+parser.add_argument("--model", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model version to use")
+parser.add_argument("--model_runner", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model runner version to use")
 
-
-PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
-PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
+args = parser.parse_args()
 
 ############################################################################
-## GRID PARAMETERS
+## GRID AND FILE PARAMETERS
 ############################################################################
 
-
-MODEL =  "v1"  #  "v2" #
-MODEL_RUNNER = "v1"
-
+INPUT_FOLDER  = args.input_folder
+OUTPUT_FOLDER = args.output_folder
+PARAMS_FILE   = config.PARAM_SEARCH_DIR / args.params_file
+MODEL         = args.model
+MODEL_RUNNER  = args.model_runner
 
 with open(PARAMS_FILE) as f:
     config_params = yaml.safe_load(f)
@@ -84,6 +87,13 @@ MODEL_TRAIN_PARAMS = simplify_config_space(config_params["MODEL_TRAIN_PARAMS"])
 
 
 if __name__ == "__main__":
+
+    # =====================================
+    # FIXED FILENAMES
+    # =====================================
+
+    PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
+    PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
 
     # =====================================
     # LOAD MODEL CREATOR AND MODEL RUNNER

@@ -9,6 +9,7 @@ import scalogram_cnn_project.settings.config as config
 import keras_tuner as kt
 import yaml
 import shutil
+import argparse
 
 from scalogram_cnn_project.models.model_builder import build_model
 from scalogram_cnn_project.utils.custom_tuner import CustomTuner
@@ -52,23 +53,29 @@ logger = logging.getLogger(__name__)
 
 
 ############################################################################
-## FILE PARAMETERS
+## PARSER CONFIGURATION
 ############################################################################
 
-INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
-OUTPUT_FOLDER = "keras_search_temp"
+parser = argparse.ArgumentParser(description="Run Keras Tuner Experiment")
+parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name inside DATA_DIR")
+parser.add_argument("--output_folder", type=str, default="generic_keras_search_example", help="Output folder name inside OUTPUT_DIR")
+parser.add_argument("--params_file", type=str, default="keras_search_example.yaml", help="YAML parameters file name inside PARAM_SEARCH_DIR")
+parser.add_argument("--model", type=str, default="v2", choices=["v0", "v1", "v2"], help="Model version to use")
+parser.add_argument("--model_runner", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model runner version to use")
+parser.add_argument("--max_trials", type=int, default=5, help="max_trials is the number of different models tested")
 
-PARAMS_FILE = config.PARAM_SEARCH_DIR / "keras_search_example.yaml"
+args = parser.parse_args()
 
 ############################################################################
 ## SEARCH PARAMETERS
 ############################################################################
 
-MODEL =  "v2"  
-MODEL_RUNNER = "v1"
-
-## MAX_TRIALS is the number of different models tested
-MAX_TRIALS = 3
+INPUT_FOLDER  = args.input_folder
+OUTPUT_FOLDER = args.output_folder
+PARAMS_FILE   = config.PARAM_SEARCH_DIR / args.params_file
+MODEL         = args.model
+MODEL_RUNNER  = args.model_runner
+MAX_TRIALS    = args.max_trials
 
 with open(PARAMS_FILE) as f:
     config_params = yaml.safe_load(f)

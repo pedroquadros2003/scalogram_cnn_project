@@ -46,6 +46,58 @@ It serves the purpose of generating just the first scalogram associated with an 
 The script generates just the first scalogram according to the arguments passed to the function.
 
 
+# Preprocessing Approaches
+
+**Description**
+
+The project supports different preprocessing approaches applied to scalograms before they are used as input to the models.
+
+**Implemented Approaches**
+
+* **`none`**: No preprocessing is applied. The scalograms are used as they are generated.
+* **`rpca_isolated`**: Robust Principal Component Analysis (RPCA) is applied to each scalogram individually. It decomposes the image into a low-rank matrix (L) and a sparse matrix (S).
+* **`rpca_juxtaposed`**: RPCA is applied to a set of scalograms from different channels that are horizontally concatenated (juxtaposed) for the same epoch.
+
+> **Important Note:** The `rpca_juxtaposed` approach **does not support the `separate` mode** for model runners. If used with `rpca_juxtaposed`, the mode will be automatically changed to the `mix` mode.
+
+
+# RPCA Preprocessing Scripts
+
+**Description**
+
+These scripts apply Robust Principal Component Analysis (RPCA) to generated scalograms, separating them into a low-rank component (L) and a sparse component (S). Currently, they must be configured manually by editing the variables inside the scripts (e.g., `FOLDER_NAME`, `CMAP`, and RPCA parameters like `LAMB`) before execution.
+
+**Scripts**
+
+## `experiments/apply_rpca_isolated.py`
+Applies RPCA to each scalogram individually in a given folder.
+- **Configurable variables:** `FOLDER_NAME`, `CMAP`, `LAMB`, `MU`, `TOLERANCE`, `MAX_ITERATION`.
+- **Output:** Creates two subdirectories, `isolated_scalograms_L` and `isolated_scalograms_S`, inside the target folder.
+
+**Execution Example:**
+```bash
+python3 experiments/apply_rpca_isolated.py
+```
+
+## `experiments/apply_rpca_juxtaposed.py`
+Applies RPCA to horizontally juxtaposed scalograms from different channels for the same epoch.
+- **Configurable variables:** `FOLDER_NAME`, `CMAP`, `LAMB`, `MU`, `TOLERANCE`, `MAX_ITERATION`.
+- **Output:** Creates two subdirectories, `juxtaposed_scalograms_L` and `juxtaposed_scalograms_S`, inside the target folder.
+
+**Execution Example:**
+```bash
+python3 experiments/apply_rpca_juxtaposed.py
+```
+
+## `experiments/apply_rpca_simple.py`
+Applies RPCA to a single image to test multiple lambda parameters. Ideal for parameter tuning and visualizing results.
+- **Configurable variables:** `IMAGE_PATH`, `LAMBDAS_TO_TEST`, `CMAP`, `MU`, `TOLERANCE`, `MAX_ITERATION`.
+- **Output:** Saves the decomposed L and S images for each tested lambda in the `rpca_simple_output` folder.
+
+**Execution Example:**
+```bash
+python3 experiments/apply_rpca_simple.py
+```
 
 # Models
 
@@ -59,9 +111,9 @@ Models are function that create model and callback objects.
 It is a model with fixed hyperparameters; its architecture matches the description of two-layered CNN-2D as described by A. Zayed (2025). The required parameters are:
 
 ```python
-REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate"]
+REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate", "label_smoothing", "num_epochs"]
 
-REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode"]
+REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "from_logit", "final_width_px", "final_height_px", "preprocessing"]
 ```
 
 
@@ -73,7 +125,7 @@ REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "over
 
 REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "n_additional_features",
                         "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense",
-                        "first_layer_num_filters", "second_layer_num_filters", ]
+                        "first_layer_num_filters", "second_layer_num_filters", "final_width_px", "final_height_px", "preprocessing"]
 ```
 
 ### v2
@@ -84,7 +136,7 @@ REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "over
 
 REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "n_additional_features",
                         "kernel_size", "extra_layer", "extra_layer_num_filters", "num_neurons_dense",
-                        "first_layer_num_filters", "second_layer_num_filters", ]
+                        "first_layer_num_filters", "second_layer_num_filters", "final_width_px", "final_height_px", "preprocessing"]
 ```
 
 # Model Runners
@@ -112,47 +164,53 @@ This repository contains several scripts used to run experiments with CNN models
 * *Manual grid search*
 * *Automated hyperparameter optimization using Keras Tuner*
 
-Each script orchestrates model creation, training execution, parameter management, and experiment reproducibility. For using these scripts, one should specify the following constants in the beginning of the code:
+Each script orchestrates model creation, training execution, parameter management, and experiment reproducibility. 
 
-```python
-# Folder containing the precomputed scalogram images used as model input
-INPUT_FOLDER  = "generated_scalograms_ALL_gray_overlap0.733_extra_input"
+These scripts are now executed via command line, accepting arguments to define the input, output, model, and parameters. To ensure the scripts restart automatically in case of memory leaks or crashes, it is highly recommended to run them using the provided `run_until_it_ends.sh` wrapper.
 
-# Output directory where experiment results will be stored
-OUTPUT_FOLDER = "useless"
-
-# YAML file defining the parameter search space for the grid search
-PARAMS_FILE   = config.PARAM_SEARCH_DIR / "gridsearch_example.yaml"
-
-# File that stores intermediate experiment results to allow resuming interrupted runs
-PROGRESS_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
-
-# File that records the full parameter configuration for each experiment run
-PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
-
-# Model architecture version to be used (v0, v1, v2)
-MODEL =  "v1"
-
-# Training pipeline implementation used to run the model
-MODEL_RUNNER = "v1"
-```
-
+Here are the details and execution examples for each script.
 
 # 1. `run_cross_validation_loso.py`
 
 This script performs *Leave-One-Subject-Out (LOSO) cross-validation* defined in a YAML configuration file. It has only support for fixed and choice modes.
 
+**Execution Example:**
+```bash
+./run_until_it_ends.sh experiments/run_cross_validation_loso.py \
+    --input_folder="generated_scalograms_ALL_gray_overlap0.733_extra_input_example" \
+    --output_folder="generic_loso_example" \
+    --model="v1" \
+    --params_file="cross_validation_loso_example.yaml"
+```
 
 # 2. `run_gridsearch.py`
 
 This script performs a *grid search* over the hyperparameter space defined in a YAML configuration file. It has only support for fixed and choice modes.
 
-
+**Execution Example:**
+```bash
+./run_until_it_ends.sh experiments/run_gridsearch.py \
+    --input_folder="generated_scalograms_ALL_gray_overlap0.733_extra_input_example" \
+    --output_folder="generic_gridsearch_example" \
+    --model="v1" \
+    --model_runner="v1" \
+    --params_file="gridsearch_example.yaml"
+```
 
 # 3. `run_keras_tuner.py`
 
 The script performs a *random search* over the hyperparameter space defined in a YAML configuration file. It has support for all modes, including the interval ones.
 
+**Execution Example:**
+```bash
+./run_until_it_ends.sh experiments/run_keras_tuner.py \
+    --input_folder="generated_scalograms_ALL_gray_overlap0.733_extra_input_example" \
+    --output_folder="generic_keras_example" \
+    --model="v1" \
+    --model_runner="v1" \
+    --max_trials=100 \
+    --params_file="keras_search_example.yaml"
+```
 
 ## YAML Parameter Loading
 

@@ -50,10 +50,36 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     subjects = parameters["subjects"]
     from_logit = parameters["from_logit"]
     num_epochs = parameters["num_epochs"]
+    preprocessing = parameters["preprocessing"]
 
     additional_features = False
-    if "n_additional_features" in parameters:
+    if "n_additional_features" in parameters and parameters["n_additional_features"] > 0:
         additional_features = True
+
+    ## Determining the dataset from which the scalograms are
+    dataset_config_path = input_folder / "dataset_config.json"
+    with open(dataset_config_path) as f:
+        dataset_config = json.load(f)
+
+    # Comparing YAML parameters with dataset_config and raising error if mismatch
+    if "scalogram" in dataset_config:
+        ds_w = dataset_config["scalogram"].get("final_width_px")
+        ds_h = dataset_config["scalogram"].get("final_height_px")
+        yaml_w = parameters.get("final_width_px")
+        yaml_h = parameters.get("final_height_px")
+        
+        if ds_w is not None and yaml_w is not None and ds_w != yaml_w:
+            raise ValueError(f"Width mismatch: YAML specifies {yaml_w}, but dataset_config has {ds_w}.")
+            
+        if ds_h is not None and yaml_h is not None and ds_h != yaml_h:
+            raise ValueError(f"Height mismatch: YAML specifies {yaml_h}, but dataset_config has {ds_h}.")
+
+
+
+    if preprocessing == "rpca_juxtaposed" and mode == "separate":
+        mode = "mix"
+        logger.warning("Separate mode doesn't work with rpca_juxtaposed, changing to 'mix' mode.")
+
 
 
     os.environ["PYTHONHASHSEED"] = str(seed)

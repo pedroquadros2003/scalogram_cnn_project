@@ -9,6 +9,7 @@ import json
 import gc
 import scalogram_cnn_project.settings.config as config
 import yaml
+import argparse
 
 from scalogram_cnn_project.utils.dict_product import dict_product
 from scalogram_cnn_project.utils.simplify_config_space import simplify_config_space
@@ -40,23 +41,26 @@ logging.getLogger("scalogram_cnn_project").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 ############################################################################
-## FILE PARAMETERS
+## PARSER CONFIGURATION
 ############################################################################
 
-INPUT_FOLDER = "generated_scalograms_ALL_gray_overlap0.733_extra_input_example"
-OUTPUT_FOLDER = "useless"
+parser = argparse.ArgumentParser(description="Run Leave-One-Subject-Out Cross Validation Experiment")
+parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name inside DATA_DIR")
+parser.add_argument("--output_folder", type=str, default="generic_loso_example", help="Output folder name inside OUTPUT_DIR")
+parser.add_argument("--params_file", type=str, default="cross_validation_loso_example.yaml", help="YAML parameters file name inside PARAM_SEARCH_DIR")
+parser.add_argument("--model", type=str, default="v0", choices=["v0", "v1", "v2"], help="Model version to use")
 
-PROGRESS_FILE       = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
-PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
-PARAMS_FILE         =  config.PARAM_SEARCH_DIR / "cross_validation_loso_example.yaml"
-
+args = parser.parse_args()
 
 ############################################################################
 ## GRID PARAMETERS
 ############################################################################
 
-MODEL_RUNNER = "v2"
-MODEL = "v0"
+INPUT_FOLDER  = args.input_folder
+OUTPUT_FOLDER = args.output_folder
+PARAMS_FILE   = config.PARAM_SEARCH_DIR / args.params_file
+MODEL         = args.model
+MODEL_RUNNER  = "v2"
 
 
 with open(PARAMS_FILE) as f:
@@ -72,6 +76,14 @@ MODEL_TRAIN_PARAMS = simplify_config_space(config_params["MODEL_TRAIN_PARAMS"])
 ############################################################################
 
 if __name__ == "__main__":
+
+    # ====================================
+    # FIXED FILENAMES
+    # ====================================
+
+    PROGRESS_FILE       = config.OUTPUT_DIR / OUTPUT_FOLDER / "progress.json"
+    PARAM_REGISTRY_FILE = config.OUTPUT_DIR / OUTPUT_FOLDER / "param_registry.json"
+
 
     run_model = MODEL_RUNNERS[MODEL_RUNNER]
     create_model = MODEL_CREATORS[MODEL]

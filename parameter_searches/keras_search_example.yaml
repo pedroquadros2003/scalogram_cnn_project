@@ -53,6 +53,19 @@ MODEL_HYPER_PARAMS:
     mode: fixed
     values: [True]
 
+  final_height_px:
+    mode: fixed
+    values: [64]
+
+  final_width_px:
+    mode: fixed
+    values: [64]
+
+  preprocessing:
+    mode: fixed
+    values: [none]
+
+
 
 MODEL_TRAIN_PARAMS:
 

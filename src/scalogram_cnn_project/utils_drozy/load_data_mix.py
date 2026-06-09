@@ -30,6 +30,26 @@ def load_data(folder_path="GeneratedScalograms",
     with open(folder_path / "index.json") as f:
         index = json.load(f)
 
+    # Check preprocessing from dataset_config.json
+    dataset_config_path = folder_path / "dataset_config.json"
+    is_juxtaposed = False
+
+    logger.debug(f"Checking dataset_config at: {dataset_config_path}")
+    if dataset_config_path.exists():
+        with open(dataset_config_path) as f:
+            d_config = json.load(f)
+            logger.debug(f"dataset_config content: {d_config}")
+            if d_config.get("preprocessing") == "rpca_juxtaposed":
+                is_juxtaposed = True
+    else:
+        logger.debug("dataset_config.json not found!")
+
+    logger.debug(f"is_juxtaposed flag evaluated to: {is_juxtaposed}")
+
+    if is_juxtaposed and additional_features:
+        logger.warning("rpca_juxtaposed is not compatible with additional_features. Setting additional_features to False.")
+        additional_features = False
+
 
     # -------------------------
     # LOAD FEATURES IF NEEDED
@@ -54,12 +74,25 @@ def load_data(folder_path="GeneratedScalograms",
 
     for image_id, meta in index.items():
 
-        # filters
-        if meta["channel"] not in channels:
+        subject = meta["subject"]
+        if subject not in subjects:
+            logger.debug(f"Skipping image {image_id}: Subject {subject} not in requested subjects {subjects}")
             continue
 
-        if meta["subject"] not in subjects:
-            continue
+        channel_str = meta["channel"]
+
+        # Separate juxtaposed cases from the rest
+        if is_juxtaposed:
+            if channel_str != "merged":
+                logger.debug(f"Skipping image {image_id}: Expected channel 'merged', but got '{channel_str}'")
+                continue
+
+        else:
+            if channel_str not in channels:
+                logger.debug(f"Skipping image {image_id}: Channel '{channel_str}' not in requested channels {channels}")
+                continue
+            if additional_features:
+                ch_idx = channel_map[channel_str]
 
         file_name = f"{image_id}.png"
         full_path = os.path.join(folder_path, file_name)
@@ -68,9 +101,7 @@ def load_data(folder_path="GeneratedScalograms",
             logger.warning(f"{file_name} not found, skipping.")
             continue
 
-        subject = meta["subject"]
         session = meta["session"]
-        channel_str = meta["channel"]
         epoch = meta["epoch"]
         label = meta["label"]
 
@@ -87,7 +118,6 @@ def load_data(folder_path="GeneratedScalograms",
         else:
 
             img = cv2.imread(full_path)
-
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
         
@@ -97,7 +127,6 @@ def load_data(folder_path="GeneratedScalograms",
 
         # extra features
         if additional_features:
-            ch_idx = channel_map[channel_str]
             subject_idx = subject_map[subject]
 
             extra_feat = features_array[
@@ -113,10 +142,7 @@ def load_data(folder_path="GeneratedScalograms",
     # -------------------------
     # FINAL FORMATTING
     # -------------------------
-    X = np.array(images) / 255.0
-
-    if cmap == "gray":
-        X = X[..., np.newaxis]
+    X = np.array(images)
 
     Y = np.array(Y)[:, np.newaxis]
 

@@ -41,5 +41,6 @@
     2,
     3
   ],
-  "extra_input": true
+  "extra_input": true,
+  "preprocessing": "none"
 }

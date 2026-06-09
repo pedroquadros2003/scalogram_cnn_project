@@ -31,7 +31,7 @@ OPTIMIZERS = {
 def create_model(parameters):
 
     REQUIRED_TRAIN_KEYS = ["seed", "optimizer_name", "batch_size", "subjects", "overlap", "learning_rate", "label_smoothing", "num_epochs"]
-    REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "from_logit"]
+    REQUIRED_MODEL_KEYS = ["channels", "epsilon", "momentum", "cmap", "mode", "from_logit", "final_width_px", "final_height_px", "preprocessing"]
 
 
     logger.info("Validating training parameters...")
@@ -55,15 +55,23 @@ def create_model(parameters):
     cmap = parameters["cmap"]
     mode = parameters["mode"]
     from_logit = parameters["from_logit"]
+    final_width_px = parameters["final_width_px"]
+    final_height_px = parameters["final_height_px"]
+    preprocessing = parameters["preprocessing"]
 
 
     color_channels_per_image = 1 if cmap == "gray" else 3
-    mode_multiplier = 1 if mode == "mix" else len(channels)
+    
+    if preprocessing == "rpca_juxtaposed" and mode == "separate":
+        mode_multiplier = 1
+        logger.warning("Separate mode doesn't work with rpca_juxtaposed, changing to 'mix' mode.")
+    else:
+        mode_multiplier = 1 if mode == "mix" else len(channels)
 
 
 
     model = Sequential()
-    model.add( Input(shape=(64,64,color_channels_per_image*mode_multiplier)) ),
+    model.add( Input(shape=(final_height_px, final_width_px, color_channels_per_image*mode_multiplier)) ),
     model.add(Conv2D(64, (3,3), activation='relu')),
     model.add(BatchNormalization(
                                 momentum=momentum,
@@ -139,6 +147,9 @@ if __name__ == "__main__":
     params["mode"] = "mix"
     params["from_logit"] = True
     params["label_smoothing"] = 0.0
+    params["final_width_px"] = 64
+    params["final_height_px"] = 64
+    params["preprocessing"] = "none"
     
 
     model, callback = create_model(params)

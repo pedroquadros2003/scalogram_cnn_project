@@ -91,10 +91,12 @@ if __name__ == "__main__":
 
     with open(DATASET_CONFIG_PATH, "w") as f:
         config_dict = {
+            "dataset": "DROZY",
             "scalogram"  : COMMON_PARAMS,
             "subjects"   : list(SUBJECTS),
             "channels"   : list(CHANNELS),
             "sessions"   : list(SESSIONS),
+            "rpca_preprocessing" : "none",            
             "extra_input": True
         }
         json.dump(config_dict, f, indent=2)
