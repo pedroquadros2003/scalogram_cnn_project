@@ -60,9 +60,5 @@ generate_scalogram_params/*
 # Ignore ad-hoc helper scripts and extra documentation files
 helpful_additionals/*
 
-# Ignore local experimental/internal scripts while keeping the directory
-experiments/internal/*
-# Explicitly keep tracking the core internal scripts and wrappers
-!experiments/internal/run_multiple_rpca_gridsearches.sh
-!experiments/internal/plot_accuracy.py
-!experiments/internal/bash_commands.sh
+# Ignore local experimental/internal scripts folder
+experiments/internal/
