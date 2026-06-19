@@ -56,9 +56,9 @@ logger = logging.getLogger(__name__)
 ############################################################################
 
 parser = argparse.ArgumentParser(description="Run Grid Search Experiment")
-parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name inside DATA_DIR")
+parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name")
 parser.add_argument("--output_folder", type=str, default="generic_example", help="Output folder name inside OUTPUT_DIR")
-parser.add_argument("--params_file", type=str, default="gridsearch_example.yaml", help="YAML parameters file name inside PARAM_SEARCH_DIR")
+parser.add_argument("--params_file", type=str, default="parameter_searches/gridsearch_example.yaml", help="YAML parameters file name")
 parser.add_argument("--model", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model version to use")
 parser.add_argument("--model_runner", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model runner version to use")
 
@@ -70,7 +70,7 @@ args = parser.parse_args()
 
 INPUT_FOLDER  = args.input_folder
 OUTPUT_FOLDER = args.output_folder
-PARAMS_FILE   = config.PARAM_SEARCH_DIR / args.params_file
+PARAMS_FILE   = args.params_file
 MODEL         = args.model
 MODEL_RUNNER  = args.model_runner
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
                 model=model, 
                 callback=callback,
                 parameters=params,
-                input_folder=config.DATA_DIR / INPUT_FOLDER,
+                input_folder=INPUT_FOLDER,
                 output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER
             )
         except Exception as e:

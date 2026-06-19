@@ -12,38 +12,90 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+### Dataset Paths Configuration
+
+To keep dataset paths secure and customizable for each local environment, the project uses a local `.env` configuration file in the project root. This file is ignored by Git to avoid leaking personal directory structures.
+
+To configure your dataset paths:
+
+1. Copy the template `.env_example` to a new file named `.env` in the project root:
+   ```bash
+   cp .env_example .env
+   ```
+2. Open `.env` and update the paths to point to the correct directories on your machine:
+   - `DROZY_DIR`: Directory containing the DROZY dataset.
+   - `ITA_PILOT_DIR`: Directory containing the ITA Pilot dataset.
+   - `SEED_VIG_DIR`: Directory containing the SEED-VIG raw MAT files.
+   - `SEED_VIG_LABELS`: Directory containing the SEED-VIG PERCLOS labels.
+
+If any of these environment variables are missing when running the scripts, the program will raise a descriptive `ValueError` with setup instructions.
+
 ## Use of Logging Package
 
 Instead of using print statements in the source code of the scalogram_cnn_project package, messages to the terminal are configured using the Logging package.
 
 # Generator Scripts
 
-## generator/generate_scalogram_batch
+## Unified Config-Driven Generator (`experiments/generate_scalograms.py`)
 
-**Purpose**
+**Description**
 
-It serves the purpose of generating all scalograms associated with an EDF file of the DROZY dataset.
+This script unifies the scalogram generation process for both the `DROZY` and `SEED-VIG` datasets into a single CLI tool. It is fully driven by YAML configuration files placed in the `generate_scalogram_params/` directory.
 
-**Versions**
+It supports two modes of execution:
+- **`batch`**: Generates the complete dataset (scalograms and index) based on configured subjects, sessions, and channels, and saves the output under `outputs/<output_folder>`.
+- **`simple`**: Generates and saves a single test scalogram image directly under `outputs/` for parameter tuning and visualization (with the option `show_bands` to show frequency bands).
 
-### v0
-The script generates the scalograms with overlap predetermined.
+**Configuration YAML Structure**
 
-### v1
-The script generates the scalograms with overlap predetermined
-and power spectral features in .npy file.
+Create config files under `generate_scalogram_params/` (e.g., `drozy_example.yaml` or `seedvig_example.yaml`). The structure is as follows:
 
+```yaml
+dataset: "DROZY" # "DROZY" or "SEED-VIG"
+output_folder: "generated_scalograms_ALL_gray_overlap0.733_extra_input" # Folder name under outputs/
 
-## generator/generate_scalogram_simple
+# Batch Mode Split Selection
+subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+sessions: [1, 2, 3] # Only used for DROZY
+channels: ["C3", "C4", "Cz", "Fz", "Pz"]
+extra_input: true # Whether to save extra features/biomarkers in data.npy
 
-**Purpose**
+# Parameters for scalogram generation (both modes)
+scalogram_params:
+  freq_min: 3
+  freq_max: 30
+  do_resampling: true # Only used for DROZY
+  resample_freq: 128.0 # Only used for DROZY
+  epoch_duration: 30.0
+  overlap_ratio: 0.733
+  wavelet_type: "cmor1.5-2.5"
+  cmap: "gray"
+  final_width_px: 64
+  final_height_px: 64
+  drowsiness_threshold: 4 # Only used for DROZY
 
-It serves the purpose of generating just the first scalogram associated with an EDF file of the DROZY dataset.
+# Configuration for Simple Mode (visual verification/single sample)
+simple_params:
+  subject: 1
+  session: 1          # Only used for DROZY
+  channel: "C3"
+  epoch_index: 10
+  show_bands: true
+  final_width_px: 256  # Override resolution for high-res visualization
+  final_height_px: 256
+```
 
-**Versions**
+**Execution Examples**
 
-### v0
-The script generates just the first scalogram according to the arguments passed to the function.
+* **Running Batch Mode**:
+  ```bash
+  python3 experiments/generate_scalograms.py --config generate_scalogram_params/drozy_example.yaml --mode batch
+  ```
+
+* **Running Simple Mode**:
+  ```bash
+  python3 experiments/generate_scalograms.py --config generate_scalogram_params/drozy_simple_example.yaml --mode simple
+  ```
 
 
 # Preprocessing Approaches
@@ -65,38 +117,71 @@ The project supports different preprocessing approaches applied to scalograms be
 
 **Description**
 
-These scripts apply Robust Principal Component Analysis (RPCA) to generated scalograms, separating them into a low-rank component (L) and a sparse component (S). Currently, they must be configured manually by editing the variables inside the scripts (e.g., `FOLDER_NAME`, `CMAP`, and RPCA parameters like `LAMB`) before execution.
+These scripts apply Robust Principal Component Analysis (RPCA) to generated scalograms, separating them into a low-rank component (L) and a sparse component (S). They are executed via command line, accepting arguments to define the input, output, and RPCA parameters.
 
 **Scripts**
 
 ## `experiments/apply_rpca_isolated.py`
+
 Applies RPCA to each scalogram individually in a given folder.
-- **Configurable variables:** `FOLDER_NAME`, `CMAP`, `LAMB`, `MU`, `TOLERANCE`, `MAX_ITERATION`.
-- **Output:** Creates two subdirectories, `isolated_scalograms_L` and `isolated_scalograms_S`, inside the target folder.
+
+**CLI Arguments:**
+- `--input_folder`: Full path of the input folder containing scalograms (default: `data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example`).
+- `--output_folder`: Output folder name created inside `outputs/` (default: `isolated_scalograms`).
+- `--cmap`: Colormap to use (default: `gray`).
+- `--lamb`: RPCA lambda parameter (default: `None` for default value).
+- `--mu`: RPCA mu parameter (default: `None` for default value).
+- `--tolerance`: RPCA tolerance parameter (default: `None` for default value).
+- `--max_iteration`: RPCA max iteration parameter (default: `None` for default value).
 
 **Execution Example:**
 ```bash
-python3 experiments/apply_rpca_isolated.py
+python3 experiments/apply_rpca_isolated.py \
+    --input_folder="data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example" \
+    --output_folder="isolated_scalograms_custom" \
+    --lamb=0.15
 ```
 
 ## `experiments/apply_rpca_juxtaposed.py`
+
 Applies RPCA to horizontally juxtaposed scalograms from different channels for the same epoch.
-- **Configurable variables:** `FOLDER_NAME`, `CMAP`, `LAMB`, `MU`, `TOLERANCE`, `MAX_ITERATION`.
-- **Output:** Creates two subdirectories, `juxtaposed_scalograms_L` and `juxtaposed_scalograms_S`, inside the target folder.
+
+**CLI Arguments:**
+- `--input_folder`: Full path of the input folder containing scalograms (default: `data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example`).
+- `--output_folder`: Output folder name created inside `outputs/` (default: `juxtaposed_scalograms`).
+- `--cmap`: Colormap to use (default: `gray`).
+- `--lamb`: RPCA lambda parameter (default: `None` for default value).
+- `--mu`: RPCA mu parameter (default: `None` for default value).
+- `--tolerance`: RPCA tolerance parameter (default: `None` for default value).
+- `--max_iteration`: RPCA max iteration parameter (default: `None` for default value).
 
 **Execution Example:**
 ```bash
-python3 experiments/apply_rpca_juxtaposed.py
+python3 experiments/apply_rpca_juxtaposed.py \
+    --input_folder="data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example" \
+    --output_folder="juxtaposed_scalograms_custom" \
+    --lamb=0.15
 ```
 
 ## `experiments/apply_rpca_simple.py`
+
 Applies RPCA to a single image to test multiple lambda parameters. Ideal for parameter tuning and visualizing results.
-- **Configurable variables:** `IMAGE_PATH`, `LAMBDAS_TO_TEST`, `CMAP`, `MU`, `TOLERANCE`, `MAX_ITERATION`.
-- **Output:** Saves the decomposed L and S images for each tested lambda in the `rpca_simple_output` folder.
+
+**CLI Arguments:**
+- `--image_path`: Path to the test image (default: `data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/img_0a85796bce.png`).
+- `--output_folder`: Output folder name created inside `outputs/` (default: `rpca_simple_output`).
+- `--lambdas`: Space-separated list of RPCA lambda parameters to test (default: `0.05 0.10 0.125 0.15 0.175 0.2 0.25 0.30`).
+- `--mu`: RPCA mu parameter (default: `None` for default value).
+- `--tolerance`: RPCA tolerance parameter (default: `None` for default value).
+- `--max_iteration`: RPCA max iteration parameter (default: `None` for default value).
+- `--cmap`: Colormap to use (default: `gray`).
 
 **Execution Example:**
 ```bash
-python3 experiments/apply_rpca_simple.py
+python3 experiments/apply_rpca_simple.py \
+    --image_path="data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/img_0a85796bce.png" \
+    --output_folder="rpca_simple_custom" \
+    --lambdas 0.125 0.15 0.175
 ```
 
 # Models
@@ -443,4 +528,12 @@ In the directory:
 /parameter_searches
 ```
 
-One can find examples of .yaml for each experiment script.
+One can find examples of `.yaml` files for each experiment script.
+
+Additionally, in the directory:
+
+```
+/generate_scalogram_params
+```
+
+one can find example `.yaml` configuration files for generating scalograms (both in batch and simple modes) for the DROZY and SEED-VIG datasets.

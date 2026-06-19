@@ -1,23 +1,68 @@
+# ==============================================================================
+# Python Environment and Cache
+# ==============================================================================
+# Ignore Python virtual environments and env file to avoid committing large external dependencies or local paths
 venv
 venv/
-__pycache__/
-.git
+.env
 .venv
 .venv/
 venv_wsl
 venv_wsl/
+
+# Ignore Python compiled bytecode to avoid commit noise and caching issues
+__pycache__/
+
+# Ignore Git directory itself (normally handled automatically, but kept for completeness)
+.git
+
+# Ignore package distribution and egg metadata generated during editable installs
 *.egg-info/
 
+# ==============================================================================
+# Run Outputs
+# ==============================================================================
+# Ignore model training logs, metrics, figures, and saved models
+# We keep only the directory itself via the .gitkeep file
 outputs/*
 !outputs/.gitkeep
 
+# ==============================================================================
+# Data and Scalograms
+# ==============================================================================
+# Ignore raw datasets, index files, and generated scalogram images (very heavy files)
+# Keep only the small example dataset for testing purposes
 data/*
 !data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/
 !data/generated_scalograms_ALL_gray_overlap0.733_extra_input_example/**
 
+# ==============================================================================
+# Configuration Files (Experiment & Generator Params)
+# ==============================================================================
+# Ignore custom hyperparameter search configurations created by users
+# Keep only the generic search example yaml files
 parameter_searches/*
 !parameter_searches/cross_validation_loso_example.yaml
 !parameter_searches/gridsearch_example.yaml
 !parameter_searches/keras_search_example.yaml
 
+# Ignore custom scalogram generator yaml configurations created by users
+# Keep only the baseline example configs for DROZY and SEED-VIG
+generate_scalogram_params/*
+!generate_scalogram_params/drozy_example.yaml
+!generate_scalogram_params/drozy_simple_example.yaml
+!generate_scalogram_params/seedvig_example.yaml
+!generate_scalogram_params/seedvig_simple_example.yaml
+
+# ==============================================================================
+# Miscellaneous and Internal Utilities
+# ==============================================================================
+# Ignore ad-hoc helper scripts and extra documentation files
 helpful_additionals/*
+
+# Ignore local experimental/internal scripts while keeping the directory
+experiments/internal/*
+# Explicitly keep tracking the core internal scripts and wrappers
+!experiments/internal/run_multiple_rpca_gridsearches.sh
+!experiments/internal/plot_accuracy.py
+!experiments/internal/bash_commands.sh

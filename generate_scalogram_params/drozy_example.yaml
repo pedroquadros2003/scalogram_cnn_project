@@ -1,0 +1,37 @@
+# Dataset choice: "DROZY" or "SEED-VIG"
+dataset: "DROZY"
+
+# Output folder name (will be created under config.OUTPUT_DIR for batch generation)
+output_folder: "generated_scalograms_ALL_gray_overlap0.733_extra_input"
+
+# Dataset split selection (Batch Mode)
+subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+sessions: [1, 2, 3] # Only used for DROZY
+channels: ["C3", "C4", "Cz", "Fz", "Pz"]
+
+# Whether to generate and save biomarkers / extra features (Batch Mode)
+extra_input: true
+
+# Parameters for scalogram generation (used in both Batch and Simple modes)
+scalogram_params:
+  freq_min: 3
+  freq_max: 30
+  do_resampling: true
+  resample_freq: 128.0
+  epoch_duration: 30.0
+  overlap_ratio: 0.733
+  wavelet_type: "cmor1.5-2.5"
+  cmap: "gray"
+  final_width_px: 64
+  final_height_px: 64
+  drowsiness_threshold: 4
+
+# Configuration for Simple Mode (single image plot/test)
+simple_params:
+  subject: 1
+  session: 1          # Only used for DROZY
+  channel: "C3"
+  epoch_index: 10
+  show_bands: true
+  final_width_px: 256  # Override resolution for high-res visualization
+  final_height_px: 256

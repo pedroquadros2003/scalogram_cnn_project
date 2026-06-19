@@ -1,9 +1,25 @@
 from pathlib import Path
 import platform
 import numpy as np
+import os
+
+
+# Helper to load environmental variables from a local .env file
+def _load_dotenv(dotenv_path):
+    if dotenv_path.exists():
+        with open(dotenv_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip("'\"")
+                os.environ[key] = val
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
+_load_dotenv(PROJECT_DIR / ".env")
 
 DATA_DIR = PROJECT_DIR / "data"
 
@@ -11,13 +27,20 @@ OUTPUT_DIR = PROJECT_DIR / "outputs"
 
 PARAM_SEARCH_DIR = PROJECT_DIR / "parameter_searches"
 
-# Linux path mapping
-DATASET_DIR = Path("/mnt/c/Users/peuqu/OneDrive/Desktop/IC Harlei-Sarah/DataSets")
+# Resolve Dataset directories from environment variables
+def _get_path_env(env_name):
+    path_str = os.getenv(env_name)
+    if not path_str:
+        raise ValueError(
+            f"{env_name} is not set. Please define it in your '.env' file in the project root "
+            f"(see '.env_example' for reference)."
+        )
+    return Path(path_str)
 
 
 ################ DROZY DATASET ################
 
-DROZY_DIR = DATASET_DIR / "DROZY" / "DROZY"
+DROZY_DIR = _get_path_env("DROZY_DIR")
 
 drozy_kss_scale = np.array([
     [-1, -1, -1, -1],
@@ -57,13 +80,13 @@ drozy_valid_tests = np.array([
 
 ################ ITA PILOT DATASET ################
 
-ITA_PILOT_DIR = DATASET_DIR / "ITA_PILOT"
+ITA_PILOT_DIR = _get_path_env("ITA_PILOT_DIR")
 
 ################ SEED_VIG DATASET ################
 
-SEED_VIG_DIR = DATASET_DIR / "SEED-VIG" / "Raw_Data"
+SEED_VIG_DIR = _get_path_env("SEED_VIG_DIR")
 
-SEED_VIG_LABELS = DATASET_DIR / "SEED-VIG" / "perclos_labels"
+SEED_VIG_LABELS = _get_path_env("SEED_VIG_LABELS")
 
 seed_vig_filenames = [
     "null",

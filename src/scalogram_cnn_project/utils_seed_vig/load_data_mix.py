@@ -23,6 +23,7 @@ def load_data(
     Epoch_list = []
     Subject_list = []
     Extra_features_list = []
+    index = {}
 
     # -------------------------
     # LOAD INDEX
@@ -30,6 +31,26 @@ def load_data(
 
     with open(folder_path / "index.json") as f:
         index = json.load(f)
+
+    # Check preprocessing from dataset_config.json
+    dataset_config_path = folder_path / "dataset_config.json"
+    is_juxtaposed = False
+
+    logger.debug(f"Checking dataset_config at: {dataset_config_path}")
+    if dataset_config_path.exists():
+        with open(dataset_config_path) as f:
+            d_config = json.load(f)
+            logger.debug(f"dataset_config content: {d_config}")
+            if d_config.get("preprocessing") == "rpca_juxtaposed":
+                is_juxtaposed = True
+    else:
+        logger.debug("dataset_config.json not found!")
+
+    logger.debug(f"is_juxtaposed flag evaluated to: {is_juxtaposed}")
+
+    if is_juxtaposed and additional_features:
+        logger.warning("rpca_juxtaposed is not compatible with additional_features. Setting additional_features to False.")
+        additional_features = False
 
     # -------------------------
     # LOAD EXTRA FEATURES
@@ -56,13 +77,21 @@ def load_data(
 
     for image_id, meta in index.items():
 
-        # filter channels
-        if meta["channel"] not in channels:
-            continue
-
         # filter subjects
         if meta["subject"] not in subjects:
             continue
+
+        channel_str = meta["channel"]
+
+        # Separate juxtaposed cases from the rest
+        if is_juxtaposed:
+            if channel_str != "merged":
+                continue
+        else:
+            if channel_str not in channels:
+                continue
+            if additional_features:
+                ch_idx = channel_map[channel_str]
 
         file_name = f"{image_id}.png"
         full_path = os.path.join(folder_path, file_name)
@@ -73,7 +102,6 @@ def load_data(
             continue
 
         subject = meta["subject"]
-        channel_str = meta["channel"]
         epoch = meta["epoch"]
         label = meta["label"]
 
@@ -109,8 +137,6 @@ def load_data(
 
             subject_idx = subject_map[subject]
 
-            ch_idx = channel_map[channel_str]
-
             extra_feat = features_array[
                 subject_idx,
                 ch_idx,
@@ -123,11 +149,7 @@ def load_data(
     # FINAL FORMATTING
     # -------------------------
 
-    X = np.array(images) / 255.0
-
-    if cmap == "gray":
-
-        X = X[..., np.newaxis]
+    X = np.array(images)
 
     Y = np.array(Y)[:, np.newaxis]
 
@@ -171,7 +193,7 @@ if __name__ == "__main__":
 
     X, Y, Subject_array, Epoch_array = load_data(
         folder_path=config.DATA_DIR / "seedvig_scalograms",
-        channels=["FT8"],
+        channels=["FT8", "T7"],
         subjects=[1,3],
         cmap="gray",
         additional_features=True

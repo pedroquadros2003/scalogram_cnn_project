@@ -1,0 +1,24 @@
+# Dataset choice: "DROZY" or "SEED-VIG"
+dataset: "DROZY"
+
+# Parameters for scalogram generation
+scalogram_params:
+  freq_min: 3
+  freq_max: 30
+  do_resampling: true
+  resample_freq: 128.0
+  epoch_duration: 30.0
+  overlap_ratio: 0.733
+  wavelet_type: "cmor1.5-2.5"
+  cmap: "gray"
+  drowsiness_threshold: 4
+
+# Configuration for Simple Mode (single image plot/test)
+simple_params:
+  subject: 1
+  session: 1
+  channel: "C4"
+  epoch_index: 10
+  show_bands: true
+  final_width_px: 256
+  final_height_px: 256

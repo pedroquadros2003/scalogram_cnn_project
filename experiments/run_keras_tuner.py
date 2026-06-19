@@ -57,9 +57,9 @@ logger = logging.getLogger(__name__)
 ############################################################################
 
 parser = argparse.ArgumentParser(description="Run Keras Tuner Experiment")
-parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name inside DATA_DIR")
+parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name")
 parser.add_argument("--output_folder", type=str, default="generic_keras_search_example", help="Output folder name inside OUTPUT_DIR")
-parser.add_argument("--params_file", type=str, default="keras_search_example.yaml", help="YAML parameters file name inside PARAM_SEARCH_DIR")
+parser.add_argument("--params_file", type=str, default="parameter_searches/keras_search_example.yaml", help="YAML parameters file name")
 parser.add_argument("--model", type=str, default="v2", choices=["v0", "v1", "v2"], help="Model version to use")
 parser.add_argument("--model_runner", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model runner version to use")
 parser.add_argument("--max_trials", type=int, default=5, help="max_trials is the number of different models tested")
@@ -72,7 +72,7 @@ args = parser.parse_args()
 
 INPUT_FOLDER  = args.input_folder
 OUTPUT_FOLDER = args.output_folder
-PARAMS_FILE   = config.PARAM_SEARCH_DIR / args.params_file
+PARAMS_FILE   = args.params_file
 MODEL         = args.model
 MODEL_RUNNER  = args.model_runner
 MAX_TRIALS    = args.max_trials
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     tuner_hypermodel = lambda hp: build_model(hp, create_model, MODEL_HYPER_PARAMS, MODEL_TRAIN_PARAMS)
 
     tuner = CustomTuner(
-        input_folder=config.DATA_DIR / INPUT_FOLDER,
+        input_folder=INPUT_FOLDER,
         output_folder=config.OUTPUT_DIR / OUTPUT_FOLDER,
         model_hyper_params=MODEL_HYPER_PARAMS,
         model_train_params=MODEL_TRAIN_PARAMS,

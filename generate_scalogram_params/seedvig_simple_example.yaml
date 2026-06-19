@@ -1,0 +1,22 @@
+# Dataset choice: "DROZY" or "SEED-VIG"
+dataset: "SEED-VIG"
+
+# Parameters for scalogram generation
+scalogram_params:
+  freq_min: 3
+  freq_max: 30
+  epoch_duration: 8.0
+  wavelet_type: "morl"
+  cmap: "viridis"
+
+# Configuration for Simple Mode (single image plot/test)
+simple_params:
+  subject: 3
+  channel: "T7"
+  epoch_index: 15
+  show_bands: true
+  width_px: 662
+  height_px: 536
+  dpi: 100
+  final_width_px: 256
+  final_height_px: 256

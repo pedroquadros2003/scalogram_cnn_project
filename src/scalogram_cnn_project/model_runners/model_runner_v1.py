@@ -39,6 +39,10 @@ logger = logging.getLogger(__name__)
 
 def run_model(parameters, model, callback, input_folder, output_folder):
 
+    # Ensure input and output folders are Path objects
+    input_folder = Path(input_folder)
+    output_folder = Path(output_folder)
+
     cmap = parameters["cmap"]
     channels = parameters["channels"]
     model_id = parameters["model_id"]
