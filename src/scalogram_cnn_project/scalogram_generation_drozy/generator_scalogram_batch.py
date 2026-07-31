@@ -1,7 +1,6 @@
 ## We begin by importing the necessary Python modules:
 
 import numpy as np
-import mne
 import pywt
 from scipy.signal import butter, filtfilt
 import cv2
@@ -48,23 +47,24 @@ def generate_scalogram(
         final_height_px = 64,
 ):
 
+    from scalogram_cnn_project.utils.signal_loader import SignalLoader
+
     ## Importing the edf file
     sample_data_folder = config.DROZY_DIR
     sample_data_raw_file = (
         sample_data_folder / "psg" / f"{subject}-{session}.edf"
     )
-    raw = mne.io.read_raw_edf(sample_data_raw_file)
-    if do_resampling: raw.resample(resample_freq)
-
-    raw_signal = raw.pick(picks = channel).get_data()
-    sfreq = raw.info["sfreq"]
-    tot_samples = raw.n_times
-    del raw
-
-
+    signal_data = SignalLoader.load_drozy(
+        file_path=sample_data_raw_file,
+        resample_freq=resample_freq if do_resampling else None
+    )
+    raw_signal = signal_data.get_channel_signal(channel)
+    sfreq = signal_data.sfreq
+    tot_samples = signal_data.data.shape[1]
+    del signal_data
 
     # Applying the filter to the data
-    filtered_signal = butter_bandpass_filter(raw_signal[0,:],freq_min, freq_max, sfreq, order=4)
+    filtered_signal = butter_bandpass_filter(raw_signal, freq_min, freq_max, sfreq, order=4)
     del raw_signal
 
     ## Creating a directory for saving the images

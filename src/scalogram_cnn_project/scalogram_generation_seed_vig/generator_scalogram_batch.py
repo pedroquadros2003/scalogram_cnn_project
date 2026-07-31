@@ -45,29 +45,24 @@ def generate_scalogram(
     
     subject_file  = config.seed_vig_filenames[subject]
 
+    from scalogram_cnn_project.utils.signal_loader import SignalLoader
+
     # 1. Load Data
     sample_data_raw_file = config.SEED_VIG_DIR / subject_file
     
     logger.info(f"Loading: {sample_data_raw_file}")
-
-    mat = loadmat(sample_data_raw_file, squeeze_me=True, struct_as_record=False)
-    EEG = mat["EEG"]
-    del mat
-
-    channel_list = list(EEG.chn)
-    sfreq = EEG.sample_rate
+    signal_data = SignalLoader.load_seed_vig(sample_data_raw_file)
+    sfreq = signal_data.sfreq
 
     # 2. Preprocessing (Channel Selection & Filtering)
-
     try:
-        channel_index = channel_list.index(channel)
+        raw_signal = signal_data.get_channel_signal(channel)
     except ValueError:
         logger.warning(f"Channel '{channel}' not found in SEED-VIG channel list. Defaulting to first channel.")
-        channel_index = 0
-
-    raw_signal = EEG.data[:, channel_index]
-    tot_samples=raw_signal.shape[0]
-    del EEG
+        raw_signal = signal_data.data[0]
+    
+    tot_samples = len(raw_signal)
+    del signal_data
 
     # Apply bandpass filter to the selected channel
     filtered_signal = butter_bandpass_filter(raw_signal, freq_min, freq_max, sfreq, order=4)

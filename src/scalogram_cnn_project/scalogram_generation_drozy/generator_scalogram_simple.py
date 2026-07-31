@@ -1,7 +1,6 @@
 import os
 import cv2
 import time
-import mne
 import pywt
 import numpy as np
 import matplotlib
@@ -47,21 +46,24 @@ def generate_scalogram(subject=11,
                        final_height_px = 256,
                        ):
     
+    from scalogram_cnn_project.utils.signal_loader import SignalLoader
+
     # 1. Load Data
     sample_data_folder = config.DROZY_DIR
     sample_data_raw_file = sample_data_folder / "psg" / f"{subject}-{session}.edf"
     
     logger.info(f"Loading: {sample_data_raw_file}")
-    raw = mne.io.read_raw_edf(sample_data_raw_file, preload=True)
-    if do_resampling: raw.resample(resample_freq)
-
-    raw_signal = raw.pick(picks=channel).get_data()
-    sfreq = raw.info["sfreq"]
-    del raw
+    signal_data = SignalLoader.load_drozy(
+        file_path=sample_data_raw_file,
+        resample_freq=resample_freq if do_resampling else None
+    )
+    raw_signal = signal_data.get_channel_signal(channel)
+    sfreq = signal_data.sfreq
+    del signal_data
 
     # 2. Preprocessing (Filtering)
-    # Apply bandpass filter to the first channel (Cz)
-    filtered_signal = butter_bandpass_filter(raw_signal[0, :], freq_min, freq_max, sfreq, order=4)
+    # Apply bandpass filter to the selected channel
+    filtered_signal = butter_bandpass_filter(raw_signal, freq_min, freq_max, sfreq, order=4)
     del raw_signal
 
     # 3. Epoching

@@ -109,7 +109,7 @@ def run_model(parameters, model, callback, input_folder, output_folder):
     if dataset_name == "SEED-VIG":
        neglected_epochs_step = 0
 
-    if dataset_name == "DROZY":
+    elif dataset_name == "DROZY":
 
         ## As mix version of the model does not differentiate channels,
         ## it is necessary to have a greater step for neglected epochs

@@ -41,12 +41,13 @@ class SignalLoader:
         return SignalData(data=data, channels=channels, sfreq=sfreq)
         
     @staticmethod
-    def load_drozy(file_path: str) -> SignalData:
+    def load_drozy(file_path: str, resample_freq: float = None) -> SignalData:
         """
         Load a DROZY .edf file and parse it using MNE.
         
         Args:
             file_path (str): Path to the DROZY .edf file
+            resample_freq (float, optional): Frequency to resample the signal to
             
         Returns:
             SignalData: Standardized signal container
@@ -56,6 +57,8 @@ class SignalLoader:
             raise FileNotFoundError(f"DROZY file not found: {file_path}")
             
         raw = mne.io.read_raw_edf(str(path), preload=True, verbose="WARNING")
+        if resample_freq is not None:
+            raw.resample(resample_freq)
         channels = list(raw.ch_names)
         sfreq = float(raw.info["sfreq"])
         data = raw.get_data().astype(np.float32) # shape is (num_channels, num_times)
@@ -63,13 +66,14 @@ class SignalLoader:
         return SignalData(data=data, channels=channels, sfreq=sfreq)
         
     @staticmethod
-    def load_signal(file_path: str, dataset_type: str) -> SignalData:
+    def load_signal(file_path: str, dataset_type: str, **kwargs) -> SignalData:
         """
         Load a signal file using the specified dataset type static parser.
         
         Args:
             file_path (str): Path to the signal file
             dataset_type (str): Type of dataset, either 'seed_vig' or 'drozy'
+            **kwargs: Keyword arguments passed to the dataset-specific loader
             
         Returns:
             SignalData: The parsed signal data container
@@ -78,7 +82,7 @@ class SignalLoader:
         if dtype in ["seed_vig", "seedvig"]:
             return SignalLoader.load_seed_vig(file_path)
         elif dtype == "drozy":
-            return SignalLoader.load_drozy(file_path)
+            return SignalLoader.load_drozy(file_path, **kwargs)
         else:
             raise ValueError(
                 f"Unsupported dataset type '{dataset_type}'. "
