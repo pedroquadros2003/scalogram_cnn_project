@@ -85,6 +85,24 @@ simple_params:
   final_height_px: 256
 ```
 
+### Dataset Specifications (Subjects & Channels)
+
+When configuring your batch generation YAML files, you can choose from the following subjects and EEG channels depending on the dataset selected:
+
+#### 1. DROZY
+- **Subjects:** 14 subjects total: `[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]`
+- **Sessions:** 3 sessions total: `[1, 2, 3]`
+- **EEG Channels:** `["Fz", "Cz", "C3", "C4", "Pz", "Oz"]`
+
+#### 2. SEED-VIG
+- **Subjects:** 23 subjects total: `[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]`
+- **EEG Channels:** 17 channels total: `["FT7", "FT8", "T7", "T8", "TP7", "TP8", "CP1", "CP2", "P1", "PZ", "P2", "PO3", "POZ", "PO4", "O1", "OZ", "O2"]`
+
+### Overlap Behavior
+
+- **DROZY:** The DROZY generator supports an `overlap_ratio` parameter (e.g. `0.733`), which creates overlapping epoch slices of the signal. The duration step between epochs is calculated as `epoch_duration * (1 - overlap_ratio)`.
+- **SEED-VIG:** The SEED-VIG generator does **not** support overlap between epochs. The signal is divided into contiguous, sequential, non-overlapping windows of `epoch_duration`. As a result, the `overlap_ratio` parameter is omitted from SEED-VIG config files.
+
 **Execution Examples**
 
 * **Running Batch Mode**:
@@ -537,3 +555,92 @@ Additionally, in the directory:
 ```
 
 one can find example `.yaml` configuration files for generating scalograms (both in batch and simple modes) for the DROZY and SEED-VIG datasets.
+
+# RNN Signal Forecasting and Reconstruction
+
+**Description**
+
+This module provides a pipeline to forecast physiological/EEG signals into subsequent future minutes (signal reconstruction) using Recurrent Neural Networks (RNNs) in Keras/TensorFlow. The pipeline is designed to load signals in a database-agnostic manner, train forecasting models using chronological splits to avoid data leakage, run inference, and plot comparisons.
+
+
+---
+
+## 1. Project Organization
+
+### Data Abstraction (`utils/`)
+* **`src/scalogram_cnn_project/utils/signal_data.py`**: Contains `SignalData`, a unified class storing 2D raw signal time-series, channel names, and sampling frequency. It provides helper methods to extract individual channels and slice specific time windows (in minutes).
+* **`src/scalogram_cnn_project/utils/signal_loader.py`**: Contains `SignalLoader`, exposing static methods to load SEED-VIG (`.mat` structs) and DROZY (`.edf` via MNE) signal files and parse them into standardized `SignalData` objects.
+* **`src/scalogram_cnn_project/utils/plot_results.py`**: Formats and draws comparison plots showing the input (past) signal, the predicted future signal, and the actual ground truth signal (if available in the file).
+
+### Recurrent Model Architectures (`models_for_prediction/`)
+* **`model_predict_v0.py`**: Implements an **LSTM Encoder-Decoder (Seq2Seq)** architecture for sequence-to-sequence time series prediction.
+* **`model_predict_v1.py`**: Implements a **GRU Direct Projection** architecture, mapping a sequence to future samples using a dense projection layer.
+* **`model_predict_builder.py`**: Factory function to dynamically instantiate and compile prediction models based on a version code (e.g. `v0`, `v1`) and a parameters dictionary.
+
+---
+
+## 2. Parameter Configurations (`prediction_params/`)
+
+Configuration templates for prediction models are placed under the `/prediction_params` directory.
+Example: `/prediction_params/seedvig_predict_example.yaml`
+```yaml
+dataset_type: "seed_vig"
+channel: "O1"
+subjects: [1, 2, 3]       # Subject IDs to filter training files
+model_version: "v0"
+input_min: 5.0            # Input window duration in minutes
+predict_min: 2.0          # Future prediction duration in minutes
+stride_sec: 30.0          # Stride for sliding windows
+epochs: 10
+batch_size: 32
+latent_dim: 64
+learning_rate: 0.001
+train_split: 0.8          # Chronological train/validation fraction
+output_model: null
+```
+
+---
+
+## 3. Execution and Usage Examples
+
+### A. Training the RNN Forecaster
+
+Run `experiments/train_rnn.py` to train a model. The script supports loading parameters from a YAML file via `--config`, filtering subjects via `--subjects`, and setting the chronological train-test split via `--train-split`.
+
+#### Data Leakage Prevention (Overlap Gap Rejection)
+To prevent temporal data leakage caused by overlapping sliding windows, the script performs a chronological split *per file*. It calculates the overlapping transition gap:
+$$\text{neglected\_windows} = \lceil \frac{T_{in} + T_{out}}{\text{stride}} \rceil$$
+It trains on the first portion of windows, discards the transition windows, and validates on the remaining subsequent windows.
+
+* **Training via YAML config**:
+  ```bash
+  python3 experiments/train_rnn.py --config prediction_params/seedvig_predict_example.yaml
+  ```
+
+* **Training via CLI overrides**:
+  ```bash
+  python3 experiments/train_rnn.py --dataset-type seed_vig --channel O1 --model-version v0 --subjects 1 2 3 --epochs 15 --train-split 0.75
+  ```
+
+### B. Running Predictions (run_pipeline)
+
+Run `experiments/run_pipeline.py` to load a signal, extract an input window, perform the RNN forecast, and save the outputs to the outputs folder.
+
+#### Automatic File Resolution
+You do not need to write absolute paths. If the specified `--file` does not exist directly, the script will automatically check inside the respective raw dataset directory (`SEED_VIG_DIR` for SEED-VIG, or `DROZY_DIR/psg` for DROZY).
+
+* **Running the pipeline**:
+  ```bash
+  python3 experiments/run_pipeline.py \
+      --file 10_20151125_noon.mat \
+      --dataset-type seed_vig \
+      --channel O1 \
+      --start-min 2.0 \
+      --end-min 7.0 \
+      --predict-min 2.0 \
+      --model-path outputs/models/rnn_predict_v0_seed_vig_O1.h5
+  ```
+
+This command will output:
+1. A reconstructed future signal saved to `outputs/predicted_10_20151125_noon_O1.mat`.
+2. A comparison plot comparing the input, predicted signal, and actual ground truth saved to `outputs/plot_10_20151125_noon_O1.png`.

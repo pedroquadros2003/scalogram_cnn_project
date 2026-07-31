@@ -63,7 +63,7 @@ MODEL_HYPER_PARAMS:
 
   preprocessing:
     mode: fixed
-    values: [none]
+    values: ["none"]
 
 
 

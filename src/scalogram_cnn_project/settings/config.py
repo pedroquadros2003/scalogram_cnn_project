@@ -2,8 +2,6 @@ from pathlib import Path
 import platform
 import numpy as np
 import os
-
-
 # Helper to load environmental variables from a local .env file
 def _load_dotenv(dotenv_path):
     if dotenv_path.exists():
@@ -15,8 +13,8 @@ def _load_dotenv(dotenv_path):
                 key, val = line.split("=", 1)
                 key = key.strip()
                 val = val.strip().strip("'\"")
-                os.environ[key] = val
-
+                if key not in os.environ:
+                    os.environ[key] = val
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 _load_dotenv(PROJECT_DIR / ".env")

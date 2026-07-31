@@ -20,15 +20,3 @@ scalogram_params:
   cmap: "gray"
   final_width_px: 64
   final_height_px: 64
-
-# Configuration for Simple Mode (single image plot/test)
-simple_params:
-  subject: 1
-  channel: "O1"
-  epoch_index: 10
-  show_bands: true
-  width_px: 662        # Initial scalogram width
-  height_px: 536       # Initial scalogram height
-  dpi: 100
-  final_width_px: 256  # Override resolution for high-res visualization
-  final_height_px: 256

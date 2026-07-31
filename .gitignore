@@ -54,6 +54,11 @@ generate_scalogram_params/*
 !generate_scalogram_params/seedvig_example.yaml
 !generate_scalogram_params/seedvig_simple_example.yaml
 
+# Ignore custom prediction parameters yaml configurations created by users
+# Keep only the baseline example configs for SEED-VIG
+prediction_params/*
+!prediction_params/seedvig_predict_example.yaml
+
 # ==============================================================================
 # Miscellaneous and Internal Utilities
 # ==============================================================================

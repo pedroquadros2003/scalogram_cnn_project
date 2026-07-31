@@ -25,13 +25,3 @@ scalogram_params:
   final_width_px: 64
   final_height_px: 64
   drowsiness_threshold: 4
-
-# Configuration for Simple Mode (single image plot/test)
-simple_params:
-  subject: 1
-  session: 1          # Only used for DROZY
-  channel: "C3"
-  epoch_index: 10
-  show_bands: true
-  final_width_px: 256  # Override resolution for high-res visualization
-  final_height_px: 256

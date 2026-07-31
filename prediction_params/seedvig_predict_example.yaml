@@ -1,0 +1,26 @@
+# Dataset type: "seed_vig" or "drozy"
+dataset_type: "seed_vig"
+
+# Channel name to train on
+channel: "O1"
+
+# Subject IDs to filter files for training (omit or set to null to process all files)
+subjects: [1, 2, 3]
+
+# Model version to train ("v0" for LSTM Seq2Seq, "v1" for GRU Direct)
+model_version: "v0"
+
+# Signal window configurations
+input_min: 5.0      # Input window duration in minutes
+predict_min: 2.0    # Output prediction duration in minutes
+stride_sec: 30.0    # Window sliding stride in seconds
+
+# Training hyperparameters
+epochs: 10
+batch_size: 32
+latent_dim: 64
+learning_rate: 0.001
+train_split: 0.8
+
+# Path to save the trained model (omit or set to null to use default outputs/models/ path)
+output_model: null
