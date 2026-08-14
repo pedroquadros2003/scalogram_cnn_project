@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 parser = argparse.ArgumentParser(description="Run Grid Search Experiment")
 parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name")
 parser.add_argument("--output_folder", type=str, default="generic_example", help="Output folder name inside OUTPUT_DIR")
-parser.add_argument("--params_file", type=str, default="parameter_searches/gridsearch_example.yaml", help="YAML parameters file name")
+parser.add_argument("--params_file", type=str, default="configs/hyperparameter_search/gridsearch_example.yaml", help="YAML parameters file name")
 parser.add_argument("--model", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model version to use")
 parser.add_argument("--model_runner", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model runner version to use")
 

@@ -40,7 +40,7 @@ Instead of using print statements in the source code of the scalogram_cnn_projec
 
 **Description**
 
-This script unifies the scalogram generation process for both the `DROZY` and `SEED-VIG` datasets into a single CLI tool. It is fully driven by YAML configuration files placed in the `generate_scalogram_params/` directory.
+This script unifies the scalogram generation process for both the `DROZY` and `SEED-VIG` datasets into a single CLI tool. It is fully driven by YAML configuration files placed in the `configs/dataset_generation/` directory.
 
 It supports two modes of execution:
 - **`batch`**: Generates the complete dataset (scalograms and index) based on configured subjects, sessions, and channels, and saves the output under `outputs/<output_folder>`.
@@ -48,7 +48,7 @@ It supports two modes of execution:
 
 **Configuration YAML Structure**
 
-Create config files under `generate_scalogram_params/` (e.g., `drozy_example.yaml` or `seedvig_example.yaml`). The structure is as follows:
+Create config files under `configs/dataset_generation/` (e.g., `drozy_example.yaml` or `seedvig_example.yaml`). The structure is as follows:
 
 ```yaml
 dataset: "DROZY" # "DROZY" or "SEED-VIG"
@@ -107,12 +107,12 @@ When configuring your batch generation YAML files, you can choose from the follo
 
 * **Running Batch Mode**:
   ```bash
-  python3 experiments/generate_scalograms.py --config generate_scalogram_params/drozy_example.yaml --mode batch
+  python3 experiments/generate_scalograms.py --config configs/dataset_generation/drozy_example.yaml --mode batch
   ```
 
 * **Running Simple Mode**:
   ```bash
-  python3 experiments/generate_scalograms.py --config generate_scalogram_params/drozy_simple_example.yaml --mode simple
+  python3 experiments/generate_scalograms.py --config configs/dataset_generation/drozy_simple_example.yaml --mode simple
   ```
 
 
@@ -543,7 +543,7 @@ Typical uses include:
 In the directory: 
 
 ```
-/parameter_searches
+/configs/hyperparameter_search
 ```
 
 One can find examples of `.yaml` files for each experiment script.
@@ -551,7 +551,7 @@ One can find examples of `.yaml` files for each experiment script.
 Additionally, in the directory:
 
 ```
-/generate_scalogram_params
+/configs/dataset_generation
 ```
 
 one can find example `.yaml` configuration files for generating scalograms (both in batch and simple modes) for the DROZY and SEED-VIG datasets.
@@ -579,10 +579,10 @@ This module provides a pipeline to forecast physiological/EEG signals into subse
 
 ---
 
-## 2. Parameter Configurations (`prediction_params/`)
+## 2. Parameter Configurations (`configs/model_training/`)
 
-Configuration templates for prediction models are placed under the `/prediction_params` directory.
-Example: `/prediction_params/seedvig_predict_example.yaml`
+Configuration templates for prediction models are placed under the `/configs/model_training` directory.
+Example: `/configs/model_training/seedvig_predict_example.yaml`
 ```yaml
 dataset_type: "seed_vig"
 channel: "O1"
@@ -596,6 +596,8 @@ batch_size: 32
 latent_dim: 64
 learning_rate: 0.001
 train_split: 0.8          # Chronological train/validation fraction
+resample_freq: null       # Optional downsampling frequency in Hz (e.g. 20.0 to speed up)
+force_cpu: false          # Set to true to force CPU execution and avoid GPU OOMs
 output_model: null
 ```
 
@@ -612,14 +614,19 @@ To prevent temporal data leakage caused by overlapping sliding windows, the scri
 $$\text{neglected\_windows} = \lceil \frac{T_{in} + T_{out}}{\text{stride}} \rceil$$
 It trains on the first portion of windows, discards the transition windows, and validates on the remaining subsequent windows.
 
+#### Downsampling and Memory Optimization
+EEG signals typically have high sampling rates (e.g. 200 Hz). Training RNNs directly on raw signals for several minutes results in extremely long sequence lengths (e.g. 60,000 steps for a 5-minute input window), causing GPU memory (VRAM) exhaustion (OOM) or slow training.
+- **`--resample-freq`**: Downsamples the EEG signal to the specified frequency (in Hz) during loading. Setting this to a value like `20.0` or `10.0` Hz dramatically shortens sequence lengths, speeding up training by 10x-20x.
+- **`--force-cpu`**: Forces TensorFlow to run training on the system CPU instead of the GPU. This is recommended to avoid VRAM crashes on devices with limited GPU memory.
+
 * **Training via YAML config**:
   ```bash
-  python3 experiments/train_rnn.py --config prediction_params/seedvig_predict_example.yaml
+  python3 experiments/train_rnn.py --config configs/model_training/seedvig_predict_example.yaml
   ```
 
 * **Training via CLI overrides**:
   ```bash
-  python3 experiments/train_rnn.py --dataset-type seed_vig --channel O1 --model-version v0 --subjects 1 2 3 --epochs 15 --train-split 0.75
+  python3 experiments/train_rnn.py --dataset-type seed_vig --channel O1 --model-version v0 --subjects 1 2 3 --epochs 15 --train-split 0.75 --resample-freq 20.0 --force-cpu
   ```
 
 ### B. Running Predictions (run_pipeline)
@@ -642,5 +649,13 @@ You do not need to write absolute paths. If the specified `--file` does not exis
   ```
 
 This command will output:
-1. A reconstructed future signal saved to `outputs/predicted_10_20151125_noon_O1.mat`.
-2. A comparison plot comparing the input, predicted signal, and actual ground truth saved to `outputs/plot_10_20151125_noon_O1.png`.
+
+1. **A reconstructed future signal** saved to a MATLAB `.mat` file (e.g. `outputs/predicted_10_20151125_noon_O1.mat`). The MAT file contains a dictionary with the following keys:
+   * `predicted_signal`: 1D array of the predicted future signal amplitude.
+   * `sfreq`: Sampling frequency of the signal.
+   * `channel`: The predicted channel name.
+   * `start_min` / `end_min`: Input window boundaries in minutes.
+   * `predict_min`: Forecasted duration in minutes.
+2. **A comparison plot** comparing the input, predicted signal, and actual ground truth saved to `outputs/plot_10_20151125_noon_O1.png`.
+
+*Note: The default directory for these files is `outputs/` (configured dynamically via config.OUTPUT_DIR), but you can specify a custom output folder by passing the `--output-dir` argument (e.g. `--output-dir path/to/custom_folder/`).*

@@ -11,12 +11,13 @@ class SignalLoader:
     """
     
     @staticmethod
-    def load_seed_vig(file_path: str) -> SignalData:
+    def load_seed_vig(file_path: str, resample_freq: float = None) -> SignalData:
         """
         Load a SEED-VIG .mat file and parse it.
         
         Args:
             file_path (str): Path to the SEED-VIG .mat file
+            resample_freq (float, optional): Frequency to resample the signal to
             
         Returns:
             SignalData: Standardized signal container
@@ -37,6 +38,13 @@ class SignalLoader:
         # EEG.data in SEED-VIG is stored as (num_samples, num_channels)
         # We transpose it to match SignalData shape: (num_channels, num_samples)
         data = np.asarray(eeg_struct.data, dtype=np.float32).T
+        
+        if resample_freq is not None and resample_freq != sfreq:
+            from scipy.signal import resample
+            num_samples = data.shape[1]
+            new_num_samples = int(num_samples * resample_freq / sfreq)
+            data = resample(data, new_num_samples, axis=1).astype(np.float32)
+            sfreq = float(resample_freq)
         
         return SignalData(data=data, channels=channels, sfreq=sfreq)
         
@@ -80,7 +88,7 @@ class SignalLoader:
         """
         dtype = str(dataset_type).lower().strip()
         if dtype in ["seed_vig", "seedvig"]:
-            return SignalLoader.load_seed_vig(file_path)
+            return SignalLoader.load_seed_vig(file_path, **kwargs)
         elif dtype == "drozy":
             return SignalLoader.load_drozy(file_path, **kwargs)
         else:

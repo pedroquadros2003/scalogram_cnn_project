@@ -23,7 +23,7 @@ DATA_DIR = PROJECT_DIR / "data"
 
 OUTPUT_DIR = PROJECT_DIR / "outputs"
 
-PARAM_SEARCH_DIR = PROJECT_DIR / "parameter_searches"
+PARAM_SEARCH_DIR = PROJECT_DIR / "configs" / "hyperparameter_search"
 
 # Resolve Dataset directories from environment variables
 def _get_path_env(env_name):

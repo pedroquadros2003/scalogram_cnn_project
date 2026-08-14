@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 parser = argparse.ArgumentParser(description="Run Leave-One-Subject-Out Cross Validation Experiment")
 parser.add_argument("--input_folder", type=str, default="generated_scalograms_ALL_gray_overlap0.733_extra_input_example", help="Input folder name")
 parser.add_argument("--output_folder", type=str, default="generic_loso_example", help="Output folder name inside OUTPUT_DIR")
-parser.add_argument("--params_file", type=str, default="parameter_searches/cross_validation_loso_example.yaml", help="YAML parameters file name")
+parser.add_argument("--params_file", type=str, default="configs/hyperparameter_search/cross_validation_loso_example.yaml", help="YAML parameters file name")
 parser.add_argument("--model", type=str, default="v0", choices=["v0", "v1", "v2"], help="Model version to use")
 
 args = parser.parse_args()
