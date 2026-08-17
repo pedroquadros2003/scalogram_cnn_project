@@ -1,0 +1,28 @@
+# Dataset type: "seed_vig" or "drozy"
+dataset_type: "drozy"
+
+# Channel name to train on
+channel: "C3"
+
+# Subject IDs to filter files for training (omit or set to null to process all files)
+subjects: [1, 2, 3]
+
+# Signal window configurations
+input_min: 5.0      # Input window duration in minutes
+predict_min: 2.0    # Output prediction/forecasting duration in minutes
+stride_sec: 30.0    # Window sliding stride in seconds
+
+# Pre-trained RNN model path to couple with the MLP
+rnn_model_path: "outputs/models/rnn_predict_v0_drozy_C3.h5"
+
+# MLP Training hyperparameters
+epochs: 10
+batch_size: 32
+learning_rate: 0.001
+train_split: 0.8
+
+# Threshold for DROZY drowsiness labels (KSS >= threshold is drowsy)
+drowsiness_threshold: 4
+
+# Path to save the trained coupled model (omit or set to null to use default outputs/models/ path)
+output_model: null

@@ -1,0 +1,44 @@
+# Configuration space for RNN signal forecasting grid search
+MODEL_HYPER_PARAMS:
+  latent_dim:
+    mode: "choice"
+    values: [16, 32]
+  model_version:
+    mode: "fixed"
+    values: ["v0"]
+
+MODEL_TRAIN_PARAMS:
+  learning_rate:
+    mode: "choice"
+    values: [0.01, 0.001]
+  epochs:
+    mode: "fixed"
+    values: [5]
+  batch_size:
+    mode: "fixed"
+    values: [32]
+  dataset_type:
+    mode: "fixed"
+    values: ["seed_vig"]
+  channel:
+    mode: "fixed"
+    values: ["CP2"]
+  input_min:
+    mode: "fixed"
+    values: [5.0]
+  predict_min:
+    mode: "fixed"
+    values: [2.0]
+  stride_sec:
+    mode: "fixed"
+    values: [30.0]
+  train_split:
+    mode: "fixed"
+    values: [0.8]
+  resample_freq:
+    mode: "fixed"
+    values: [100.0]  # Downsample signals to match the pre-trained RNN forecaster sampling rate
+  subjects:
+    mode: "fixed"
+    values:
+      - [1, 2, 3]

@@ -80,7 +80,18 @@ def main():
     # Check expected input steps
     expected_input_steps = model.input_shape[1]
     
-    actual_input_steps = len(input_signal)
+    # Calculate file-level mean and standard deviation for normalization/denormalization
+    full_signal = signal_data.get_channel_signal(args.channel)
+    mean = np.mean(full_signal)
+    std = np.std(full_signal)
+    
+    # Normalize input signal
+    if std > 0:
+        normalized_input_signal = (input_signal - mean) / std
+    else:
+        normalized_input_signal = input_signal - mean
+        
+    actual_input_steps = len(normalized_input_signal)
     
     # Adjust input signal to match model's expected shape if necessary
     if actual_input_steps != expected_input_steps:
@@ -89,12 +100,12 @@ def main():
         )
         if actual_input_steps > expected_input_steps:
             logger.info(f"Truncating input to last {expected_input_steps} samples.")
-            input_signal_model = input_signal[-expected_input_steps:]
+            input_signal_model = normalized_input_signal[-expected_input_steps:]
         else:
             logger.info("Zero-padding input signal to match expected input steps.")
-            input_signal_model = np.pad(input_signal, (0, expected_input_steps - actual_input_steps), 'constant')
+            input_signal_model = np.pad(normalized_input_signal, (0, expected_input_steps - actual_input_steps), 'constant')
     else:
-        input_signal_model = input_signal
+        input_signal_model = normalized_input_signal
         
     # 4. Predict
     # Shape: (1, input_steps, 1)
@@ -102,8 +113,9 @@ def main():
     logger.info("Running forecasting inference...")
     model_output = model.predict(model_input)
     
-    # Reshape predicted sequence: (output_steps,)
-    predicted_signal = np.reshape(model_output, (-1,))
+    # Reshape predicted sequence: (output_steps,) and denormalize back to microvolts scale
+    predicted_signal_normalized = np.reshape(model_output, (-1,))
+    predicted_signal = predicted_signal_normalized * std + mean
     
     # Scale or adjust forecast size if prediction time differs from model expected output steps
     actual_output_steps = int(args.predict_min * 60.0 * sfreq)

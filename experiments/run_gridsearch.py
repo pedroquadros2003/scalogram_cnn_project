@@ -3,6 +3,12 @@
 ############################################################################
 
 import tensorflow as tf 
+import sys
+
+# Force CPU if requested before GPU gets initialized
+if "--force-cpu" in sys.argv:
+    tf.config.set_visible_devices([], 'GPU')
+
 import numpy as np
 import itertools
 import json
@@ -18,10 +24,14 @@ from scalogram_cnn_project.utils.simplify_config_space import simplify_config_sp
 ## Configure GPU memory growth BEFORE anything touches the GPU
 ############################################################################
 
-gpus = tf.config.list_physical_devices('GPU')
-if gpus:
-    for gpu in gpus:
-        tf.config.experimental.set_memory_growth(gpu, True)
+if "--force-cpu" not in sys.argv:
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        for gpu in gpus:
+            try:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            except RuntimeError as e:
+                print(e)
 
 ############################################################################
 ## Model Runners, Model Creators and Optimizers
@@ -61,6 +71,7 @@ parser.add_argument("--output_folder", type=str, default="generic_example", help
 parser.add_argument("--params_file", type=str, default="configs/hyperparameter_search/gridsearch_example.yaml", help="YAML parameters file name")
 parser.add_argument("--model", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model version to use")
 parser.add_argument("--model_runner", type=str, default="v1", choices=["v0", "v1", "v2"], help="Model runner version to use")
+parser.add_argument("--force-cpu", action="store_true", help="Force execution to run on CPU (disable GPU)")
 
 args = parser.parse_args()
 

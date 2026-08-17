@@ -290,6 +290,14 @@ This script performs *Leave-One-Subject-Out (LOSO) cross-validation* defined in 
 
 This script performs a *grid search* over the hyperparameter space defined in a YAML configuration file. It has only support for fixed and choice modes.
 
+**CLI Arguments:**
+- `--input_folder`: Name of the folder under `outputs/` containing the dataset.
+- `--output_folder`: Output folder name to be created under `outputs/`.
+- `--params_file`: YAML configuration file with the parameter grid.
+- `--model`: Model version to use (`v0`, `v1`, or `v2`).
+- `--model_runner`: Model runner version to use (`v0`, `v1`, or `v2`).
+- `--force-cpu`: Optional flag to force CPU execution (disabling GPUs to prevent VRAM allocation crashes).
+
 **Execution Example:**
 ```bash
 ./run_until_it_ends.sh experiments/run_gridsearch.py \
@@ -297,7 +305,8 @@ This script performs a *grid search* over the hyperparameter space defined in a 
     --output_folder="generic_gridsearch_example" \
     --model="v1" \
     --model_runner="v1" \
-    --params_file="gridsearch_example.yaml"
+    --params_file="gridsearch_example.yaml" \
+    --force-cpu
 ```
 
 # 3. `run_keras_tuner.py`
@@ -659,3 +668,234 @@ This command will output:
 2. **A comparison plot** comparing the input, predicted signal, and actual ground truth saved to `outputs/plot_10_20151125_noon_O1.png`.
 
 *Note: The default directory for these files is `outputs/` (configured dynamically via config.OUTPUT_DIR), but you can specify a custom output folder by passing the `--output-dir` argument (e.g. `--output-dir path/to/custom_folder/`).*
+
+# RNN-MLP Sleepiness Classification Pipeline
+
+**Description**
+
+This module implements a Two-Stage coupled architecture where a Multi-Layer Perceptron (MLP) binary classifier is stacked directly on top of a frozen pre-trained RNN forecaster model. The coupled model classifies whether the subject is alert or drowsy based on the temporal signal windows.
+
+Training is performed on standard-scaled inputs using Binary Crossentropy loss, and evaluated with **Accuracy** as the final metric.
+
+---
+
+## 1. Classification Configuration (`configs/model_training_rnn_classifier/`)
+
+Create configuration files under `configs/model_training_rnn_classifier/`:
+
+* **SEED-VIG Configuration** (e.g. `configs/model_training_rnn_classifier/seedvig_classify_example.yaml`):
+  ```yaml
+  dataset_type: "seed_vig"
+  channel: "CP2"
+  subjects: [1, 2, 3]
+  input_min: 5.0
+  predict_min: 2.0
+  stride_sec: 30.0
+  rnn_model_path: "outputs/models/rnn_predict_v0_seed_vig_CP2.h5"  # Pre-trained RNN forecaster model
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.001
+  train_split: 0.8
+  output_model: null
+  ```
+
+* **DROZY Configuration** (e.g. `configs/model_training_rnn_classifier/drozy_classify_example.yaml`):
+  ```yaml
+  dataset_type: "drozy"
+  channel: "C3"
+  subjects: [1, 2, 3]
+  input_min: 5.0
+  predict_min: 2.0
+  stride_sec: 30.0
+  rnn_model_path: "outputs/models/rnn_predict_v0_drozy_C3.h5"  # Pre-trained RNN forecaster model
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.001
+  train_split: 0.8
+  drowsiness_threshold: 4  # KSS threshold for DROZY dataset
+  output_model: null
+  ```
+
+---
+
+## 2. Executing Training
+
+Run `experiments/train_rnn_classifier.py` to couple the pre-trained RNN and train the MLP classification layers.
+
+* **Training via YAML config**:
+  ```bash
+  python3 experiments/train_rnn_classifier.py --config configs/model_training_rnn_classifier/seedvig_classify_example.yaml
+  ```
+
+* **Training with CLI overrides and CPU execution**:
+  ```bash
+  python3 experiments/train_rnn_classifier.py \
+      --dataset-type seed_vig \
+      --channel CP2 \
+      --rnn-model-path outputs/models/rnn_predict_v0_seed_vig_CP2.h5 \
+      --epochs 10 \
+      --force-cpu
+  ```
+
+---
+
+## 3. Running Integration Tests
+
+To run the integration tests verifying the classification pipeline functionality:
+```bash
+python3 -m unittest tests/test_rnn_classification.py
+```
+
+# RNN Hyperparameter Grid Search
+
+**Description**
+
+This module provides wrappers (`run_rnn_gridsearch.py` and `run_rnn_classifier_gridsearch.py`) to perform grid search over hyperparameter configurations matching the format used in the CNN pipeline (`mode: fixed/choice/...` and `value: ...`).
+
+Each candidate combination runs inside an isolated subprocess to prevent VRAM memory leaks or GPU out-of-memory errors in TensorFlow, communicating final validation metrics via a temporary JSON file.
+
+---
+
+## 1. Configurations (`configs/hyperparameter_search_rnn/`)
+
+Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
+
+* **RNN Forecasting Search** (e.g. `configs/hyperparameter_search_rnn/forecast_gridsearch_example.yaml`):
+  ```yaml
+  MODEL_HYPER_PARAMS:
+    latent_dim:
+      mode: "choice"
+      values: [16, 32]
+  MODEL_TRAIN_PARAMS:
+    learning_rate:
+      mode: "choice"
+      values: [0.01, 0.001]
+    epochs:
+      mode: "fixed"
+      values: [5]
+    batch_size:
+      mode: "fixed"
+      values: [32]
+    dataset_type:
+      mode: "fixed"
+      values: ["seed_vig"]
+    channel:
+      mode: "fixed"
+      values: ["CP2"]
+    resample_freq:
+      mode: "fixed"
+      values: [20.0]
+  ```
+
+* **RNN Coupled Classification Search** (e.g. `configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml`):
+  ```yaml
+  MODEL_HYPER_PARAMS:
+    learning_rate:
+      mode: "choice"
+      values: [0.01, 0.001]
+  MODEL_TRAIN_PARAMS:
+    epochs:
+      mode: "fixed"
+      values: [5]
+    batch_size:
+      mode: "fixed"
+      values: [32]
+    dataset_type:
+      mode: "fixed"
+      values: ["seed_vig"]
+    channel:
+      mode: "fixed"
+      values: ["CP2"]
+    resample_freq:
+      mode: "fixed"
+      values: [20.0]
+    rnn_model_path:
+      mode: "fixed"
+      values: ["outputs/models/rnn_predict_v0_seed_vig_CP2.h5"]
+  ```
+
+* **DROZY Forecasting Search** (e.g. `configs/hyperparameter_search_rnn/drozy_forecast_gridsearch_example.yaml`):
+  ```yaml
+  MODEL_HYPER_PARAMS:
+    latent_dim:
+      mode: "choice"
+      values: [16, 32]
+  MODEL_TRAIN_PARAMS:
+    learning_rate:
+      mode: "choice"
+      values: [0.01, 0.001]
+    epochs:
+      mode: "fixed"
+      values: [5]
+    batch_size:
+      mode: "fixed"
+      values: [32]
+    dataset_type:
+      mode: "fixed"
+      values: ["drozy"]
+    channel:
+      mode: "fixed"
+      values: ["C3"]
+    resample_freq:
+      mode: "fixed"
+      values: [20.0]
+  ```
+
+* **DROZY Coupled Classification Search** (e.g. `configs/hyperparameter_search_rnn/drozy_classifier_gridsearch_example.yaml`):
+  ```yaml
+  MODEL_HYPER_PARAMS:
+    learning_rate:
+      mode: "choice"
+      values: [0.01, 0.001]
+  MODEL_TRAIN_PARAMS:
+    epochs:
+      mode: "fixed"
+      values: [5]
+    batch_size:
+      mode: "fixed"
+      values: [32]
+    dataset_type:
+      mode: "fixed"
+      values: ["drozy"]
+    channel:
+      mode: "fixed"
+      values: ["C3"]
+    resample_freq:
+      mode: "fixed"
+      values: [20.0]
+    rnn_model_path:
+      mode: "fixed"
+      values: ["outputs/models/rnn_predict_v0_drozy_C3.h5"]
+    drowsiness_threshold:
+      mode: "fixed"
+      values: [4]
+  ```
+
+---
+
+## 2. Executing Grid Search
+
+* **RNN Forecasting Grid Search**:
+  ```bash
+  python3 experiments/run_rnn_gridsearch.py \
+      --output_folder rnn_forecast_search \
+      --params_file configs/hyperparameter_search_rnn/forecast_gridsearch_example.yaml \
+      --force-cpu
+  ```
+
+* **RNN Coupled Classification Grid Search**:
+  ```bash
+  python3 experiments/run_rnn_classifier_gridsearch.py \
+      --output_folder rnn_classifier_search \
+      --params_file configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml \
+      --force-cpu
+  ```
+
+---
+
+## 3. Running Grid Search Integration Tests
+
+To run the integration tests verifying the grid search functionality:
+```bash
+python3 -m unittest tests/test_rnn_gridsearch.py
+```

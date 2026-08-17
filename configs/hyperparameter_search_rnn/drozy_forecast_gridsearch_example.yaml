@@ -1,0 +1,44 @@
+# Configuration space for DROZY signal forecasting grid search
+MODEL_HYPER_PARAMS:
+  latent_dim:
+    mode: "choice"
+    values: [16, 32]
+  model_version:
+    mode: "fixed"
+    values: ["v0"]
+
+MODEL_TRAIN_PARAMS:
+  learning_rate:
+    mode: "choice"
+    values: [0.01, 0.001]
+  epochs:
+    mode: "fixed"
+    values: [5]
+  batch_size:
+    mode: "fixed"
+    values: [32]
+  dataset_type:
+    mode: "fixed"
+    values: ["drozy"]
+  channel:
+    mode: "fixed"
+    values: ["C3"]
+  input_min:
+    mode: "fixed"
+    values: [5.0]
+  predict_min:
+    mode: "fixed"
+    values: [2.0]
+  stride_sec:
+    mode: "fixed"
+    values: [30.0]
+  train_split:
+    mode: "fixed"
+    values: [0.8]
+  resample_freq:
+    mode: "fixed"
+    values: [20.0]  # Recommended to downsample signals (e.g. to 20Hz) to prevent VRAM OOM crashes
+  subjects:
+    mode: "fixed"
+    values:
+      - [1, 2, 3]

@@ -1,0 +1,42 @@
+# Configuration space for RNN classifier grid search
+MODEL_HYPER_PARAMS:
+  # Hyperparameters for MLP training
+  learning_rate:
+    mode: "choice"
+    values: [0.01, 0.001]
+
+MODEL_TRAIN_PARAMS:
+  epochs:
+    mode: "fixed"
+    values: [5]
+  batch_size:
+    mode: "fixed"
+    values: [32]
+  dataset_type:
+    mode: "fixed"
+    values: ["seed_vig"]
+  channel:
+    mode: "fixed"
+    values: ["CP2"]
+  input_min:
+    mode: "fixed"
+    values: [5.0]
+  predict_min:
+    mode: "fixed"
+    values: [2.0]
+  stride_sec:
+    mode: "fixed"
+    values: [30.0]
+  train_split:
+    mode: "fixed"
+    values: [0.8]
+  resample_freq:
+    mode: "fixed"
+    values: [100.0]  # Downsample signals to match the pre-trained RNN forecaster sampling rate
+  subjects:
+    mode: "fixed"
+    values:
+      - [1, 2, 3]
+  rnn_model_path:
+    mode: "fixed"
+    values: ["outputs/models/rnn_predict_v0_seed_vig_CP2.h5"]

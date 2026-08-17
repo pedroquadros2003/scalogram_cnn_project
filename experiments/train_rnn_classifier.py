@@ -3,50 +3,20 @@ import logging
 from pathlib import Path
 import numpy as np
 import tensorflow as tf
+from scipy.io import loadmat
+import yaml
+
 from scalogram_cnn_project.utils.signal_loader import SignalLoader
-from scalogram_cnn_project.models_for_prediction.model_predict_builder import create_prediction_model
+from scalogram_cnn_project.utils.classification_sequence import ClassificationSequence
 import scalogram_cnn_project.settings.config as config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-class SignalSequence(tf.keras.utils.Sequence):
-    def __init__(self, loaded_signals, indices, input_len, output_len, batch_size, shuffle=True, **kwargs):
-        super().__init__(**kwargs)
-        self.loaded_signals = loaded_signals
-        self.indices = list(indices)
-        self.input_len = input_len
-        self.output_len = output_len
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self.on_epoch_end()
-        
-    def __len__(self):
-        return int(np.ceil(len(self.indices) / self.batch_size))
-        
-    def __getitem__(self, idx):
-        batch_indices = self.indices[idx * self.batch_size : (idx + 1) * self.batch_size]
-        X_batch = []
-        y_batch = []
-        for sig_idx, start_idx in batch_indices:
-            signal = self.loaded_signals[sig_idx]
-            X_batch.append(signal[start_idx : start_idx + self.input_len])
-            y_batch.append(signal[start_idx + self.input_len : start_idx + self.input_len + self.output_len])
-            
-        X_batch = np.array(X_batch, dtype=np.float32)
-        y_batch = np.array(y_batch, dtype=np.float32)
-        
-        # Reshape to (batch, timesteps, features=1)
-        X_batch = np.expand_dims(X_batch, axis=-1)
-        y_batch = np.expand_dims(y_batch, axis=-1)
-        
-        return X_batch, y_batch
-        
-    def on_epoch_end(self):
-        if self.shuffle:
-            np.random.shuffle(self.indices)
-
 class BatchProgressCallback(tf.keras.callbacks.Callback):
+    """
+    Callback to output batch-level loss and accuracy metrics during classification training.
+    """
     def __init__(self, total_samples, batch_size):
         super().__init__()
         self.total_samples = total_samples
@@ -61,32 +31,32 @@ class BatchProgressCallback(tf.keras.callbacks.Callback):
         batch_size = logs.get('size', self.batch_size) if logs else self.batch_size
         self.processed = min(self.total_samples, self.processed + batch_size)
         loss = logs.get('loss', 0.0) if logs else 0.0
-        print(f"Processed {self.processed}/{self.total_samples} sample pairs - loss: {loss:.6f}", flush=True)
+        acc = logs.get('accuracy', 0.0) if logs else 0.0
+        print(f"Processed {self.processed}/{self.total_samples} sample pairs - loss: {loss:.6f} - accuracy: {acc:.4f}", flush=True)
 
 def main():
-    parser = argparse.ArgumentParser(description="Train RNN model for signal forecasting.")
+    parser = argparse.ArgumentParser(description="Train RNN-coupled MLP Classifier for drowsiness detection.")
     parser.add_argument("--config", type=str, default=None, help="Path to YAML configuration file")
     parser.add_argument("--dataset-type", type=str, choices=["seed_vig", "drozy"], help="Type of dataset (seed_vig or drozy)")
     parser.add_argument("--channel", type=str, help="Channel name to train on")
-    parser.add_argument("--model-version", type=str, default="v0", help="Model version to train (e.g. v0 for LSTM, v1 for GRU)")
+    parser.add_argument("--rnn-model-path", type=str, help="Path to the pretrained RNN forecaster model")
     parser.add_argument("--input-min", type=float, default=5.0, help="Input window duration in minutes")
     parser.add_argument("--predict-min", type=float, default=2.0, help="Output prediction duration in minutes")
     parser.add_argument("--stride-sec", type=float, default=30.0, help="Window sliding stride in seconds")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs to train")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
-    parser.add_argument("--latent-dim", type=int, default=64, help="Latent dim for RNN layer")
-    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate")
-    parser.add_argument("--output-model", type=str, default=None, help="Path to save the trained model")
-    parser.add_argument("--subjects", type=int, nargs="+", default=None, help="Subject IDs to filter files for training (e.g. 1 2 5)")
-    parser.add_argument("--train-split", type=float, default=0.8, help="Fraction of data used for training (chronological split)")
-    parser.add_argument("--resample-freq", type=float, default=None, help="Frequency to resample the signal to (Hz) to speed up training")
-    parser.add_argument("--force-cpu", action="store_true", help="Force training to run on CPU to avoid GPU VRAM OOM crashes")
+    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate for classification MLP")
+    parser.add_argument("--train-split", type=float, default=0.8, help="Fraction of data used for training")
+    parser.add_argument("--subjects", type=int, nargs="+", default=None, help="Subject IDs to filter files for training")
+    parser.add_argument("--drowsiness-threshold", type=int, default=4, help="Threshold for DROZY drowsiness labels (KSS >= threshold)")
+    parser.add_argument("--resample-freq", type=float, default=None, help="Frequency to resample the signal to (Hz)")
+    parser.add_argument("--force-cpu", action="store_true", help="Force training to run on CPU")
+    parser.add_argument("--output-model", type=str, default=None, help="Path to save the trained coupled model")
     parser.add_argument("--metrics-json-path", type=str, default=None, help="Path to save final training and validation metrics as JSON")
     
     args = parser.parse_args()
     
     if args.config:
-        import yaml
         logger.info(f"Loading configuration from YAML file: {args.config}")
         with open(args.config, "r") as f:
             yaml_config = yaml.safe_load(f)
@@ -98,13 +68,15 @@ def main():
         parser.error("--dataset-type is required (either via CLI or YAML config)")
     if not args.channel:
         parser.error("--channel is required (either via CLI or YAML config)")
+    if not args.rnn_model_path:
+        parser.error("--rnn-model-path is required (either via CLI or YAML config)")
     if not (0.0 <= args.train_split <= 1.0):
         parser.error("--train-split must be between 0.0 and 1.0")
         
     if args.force_cpu:
         logger.info("Forcing CPU execution (disabling GPU devices)...")
         tf.config.set_visible_devices([], 'GPU')
-    
+        
     # Resolve input directory
     if args.dataset_type == "seed_vig":
         data_dir = config.SEED_VIG_DIR
@@ -135,11 +107,11 @@ def main():
         files_to_process = filtered_files
         logger.info(f"Filtered to {len(files_to_process)} files matching subjects: {args.subjects}")
     else:
-        # Default behavior: load all files
         files_to_process = files
         logger.info(f"No subject filter specified. Processing all {len(files_to_process)} files...")
         
     loaded_signals = []
+    loaded_labels_data = [] # Stores file-level label resources (KSS or PERCLOS array)
     sfreq = None
     
     for f in files_to_process:
@@ -158,41 +130,31 @@ def main():
                 logger.warning(f"Skipping {f.name}: {e}")
                 continue
                 
-            # Calculate training portion boundaries to avoid data leakage during normalization
-            num_samples = len(signal)
-            file_sfreq = signal_data.sfreq
-            file_input_len = int(args.input_min * 60.0 * file_sfreq)
-            file_output_len = int(args.predict_min * 60.0 * file_sfreq)
-            file_stride = int(args.stride_sec * file_sfreq)
-            
-            # Count windows
-            n_pairs = 0
-            idx = 0
-            while idx + file_input_len + file_output_len <= num_samples:
-                n_pairs += 1
-                idx += file_stride
-                
-            n_train = int(n_pairs * args.train_split)
-            if n_train > 0:
-                end_train_idx = (n_train - 1) * file_stride + file_input_len + file_output_len
-                train_portion = signal[:end_train_idx]
-                mean = np.mean(train_portion)
-                std = np.std(train_portion)
+            # Load label resources for this file
+            if args.dataset_type == "seed_vig":
+                perclos_file = config.SEED_VIG_LABELS / f.name
+                if not perclos_file.exists():
+                    logger.warning(f"PERCLOS file {perclos_file.name} not found. Skipping file {f.name}.")
+                    continue
+                mat = loadmat(str(perclos_file), squeeze_me=True, struct_as_record=False)
+                perclos_label = mat["perclos"]
+                loaded_labels_data.append(perclos_label)
             else:
-                mean = np.mean(signal)
-                std = np.std(signal)
+                # DROZY uses KSS score
+                parts = f.stem.split("-")
+                subj_id = int(parts[0])
+                sess_id = int(parts[1])
+                kss_val = config.drozy_kss_scale[subj_id][sess_id]
+                drowsy_label = 1 if kss_val >= args.drowsiness_threshold else 0
+                loaded_labels_data.append(drowsy_label)
                 
-            if std > 0:
-                normalized_signal = (signal - mean) / std
-            else:
-                normalized_signal = signal - mean
-            loaded_signals.append(normalized_signal)
+            loaded_signals.append(signal)
             
         except Exception as e:
             logger.error(f"Error processing {f.name}: {e}")
             
     if not loaded_signals:
-        raise ValueError("No training samples were generated. Check channel name, data and train_split.")
+        raise ValueError("No training samples were generated. Check channel name, data and config.")
         
     input_len = int(args.input_min * 60.0 * sfreq)
     output_len = int(args.predict_min * 60.0 * sfreq)
@@ -200,7 +162,9 @@ def main():
     
     train_indices = []
     val_indices = []
+    normalized_signals = []
     
+    # Scale signals per file using ONLY training statistics to avoid data leakage
     for sig_idx, signal in enumerate(loaded_signals):
         num_samples = len(signal)
         i = 0
@@ -214,37 +178,75 @@ def main():
             n_train = int(n_pairs * args.train_split)
             neglected = int(np.ceil((input_len + output_len) / stride))
             
-            # Split training and validation chronologically
-            for start_idx in file_indices[:n_train]:
-                train_indices.append((sig_idx, start_idx))
+            # Compute scaling statistics strictly on the training partition
+            if n_train > 0:
+                end_train_idx = (n_train - 1) * stride + input_len + output_len
+                train_portion = signal[:end_train_idx]
+                mean = np.mean(train_portion)
+                std = np.std(train_portion)
+            else:
+                mean = np.mean(signal)
+                std = np.std(signal)
                 
+            normalized_signal = (signal - mean) / std if std > 0 else (signal - mean)
+            normalized_signals.append(normalized_signal)
+            
+            # Map labels and split chronologically
+            if args.dataset_type == "seed_vig":
+                perclos = loaded_labels_data[sig_idx]
+            
+            # Training partition
+            for start_idx in file_indices[:n_train]:
+                if args.dataset_type == "seed_vig":
+                    start_sec = (start_idx + input_len) / sfreq
+                    end_sec = (start_idx + input_len + output_len) / sfreq
+                    start_epoch = int(start_sec / 8.0)
+                    end_epoch = int(np.ceil(end_sec / 8.0))
+                    start_epoch = min(len(perclos) - 1, max(0, start_epoch))
+                    end_epoch = min(len(perclos), max(start_epoch + 1, end_epoch))
+                    perclos_slice = perclos[start_epoch : end_epoch]
+                    y = int(np.round(np.mean(perclos_slice)))
+                else:
+                    y = loaded_labels_data[sig_idx]
+                train_indices.append((sig_idx, start_idx, y))
+                
+            # Validation partition (after overlap gap)
             val_start = n_train + neglected
             if val_start < n_pairs:
                 for start_idx in file_indices[val_start:]:
-                    val_indices.append((sig_idx, start_idx))
+                    if args.dataset_type == "seed_vig":
+                        start_sec = (start_idx + input_len) / sfreq
+                        end_sec = (start_idx + input_len + output_len) / sfreq
+                        start_epoch = int(start_sec / 8.0)
+                        end_epoch = int(np.ceil(end_sec / 8.0))
+                        start_epoch = min(len(perclos) - 1, max(0, start_epoch))
+                        end_epoch = min(len(perclos), max(start_epoch + 1, end_epoch))
+                        perclos_slice = perclos[start_epoch : end_epoch]
+                        y = int(np.round(np.mean(perclos_slice)))
+                    else:
+                        y = loaded_labels_data[sig_idx]
+                    val_indices.append((sig_idx, start_idx, y))
             else:
                 logger.warning(
                     f"Signal at index {sig_idx} does not have enough signal length for validation set after chronological split and neglect window."
                 )
                 
     if not train_indices:
-        raise ValueError("No training samples were generated. Check channel name, data and train_split.")
+        raise ValueError("No training samples were generated. Check dataset configuration.")
         
-    train_seq = SignalSequence(
-        loaded_signals=loaded_signals,
-        indices=train_indices,
+    train_seq = ClassificationSequence(
+        loaded_signals=normalized_signals,
+        indices_with_labels=train_indices,
         input_len=input_len,
-        output_len=output_len,
         batch_size=args.batch_size,
         shuffle=True
     )
     
     if val_indices:
-        val_seq = SignalSequence(
-            loaded_signals=loaded_signals,
-            indices=val_indices,
+        val_seq = ClassificationSequence(
+            loaded_signals=normalized_signals,
+            indices_with_labels=val_indices,
             input_len=input_len,
-            output_len=output_len,
             batch_size=args.batch_size,
             shuffle=False
         )
@@ -253,23 +255,31 @@ def main():
         val_seq = None
         logger.info(f"Dataset generated. Train samples: {len(train_indices)} (No validation data)")
         
-    # Build model
-    parameters = {
-        "input_steps": input_len,
-        "output_steps": output_len,
-        "latent_dim": args.latent_dim,
-        "optimizer_name": "adam",
-        "learning_rate": args.learning_rate
-    }
+    # Build Coupled Model
+    logger.info(f"Loading pretrained RNN forecaster from {args.rnn_model_path}...")
+    rnn_model = tf.keras.models.load_model(args.rnn_model_path, compile=False)
+    rnn_model.trainable = False # Freeze RNN forecasting layers
     
-    model = create_prediction_model(args.model_version, parameters)
-    model.summary()
+    combined_model = tf.keras.Sequential([
+        rnn_model,
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(100, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    
+    combined_model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=args.learning_rate),
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    combined_model.summary()
     
     # Train
-    logger.info("Starting model training...")
+    logger.info("Starting coupled RNN-MLP model training...")
     progress_callback = BatchProgressCallback(total_samples=len(train_indices), batch_size=args.batch_size)
     
-    history = model.fit(
+    history = combined_model.fit(
         train_seq,
         validation_data=val_seq,
         epochs=args.epochs,
@@ -278,21 +288,21 @@ def main():
     )
     
     # Print final metrics
-    logger.info("Training finished. Final metrics:")
+    logger.info("Training finished. Final classification metrics:")
     if history and history.history:
         for metric_name, values in history.history.items():
             if values:
                 logger.info(f"  - Final {metric_name}: {values[-1]:.6f}")
-    
+                
     # Save model
     if args.output_model:
         out_path = Path(args.output_model)
     else:
-        out_path = config.OUTPUT_DIR / "models" / f"rnn_predict_{args.model_version}_{args.dataset_type}_{args.channel}.h5"
+        out_path = config.OUTPUT_DIR / "models" / f"combined_predict_classifier_{args.dataset_type}_{args.channel}.h5"
         
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Saving model to {out_path}...")
-    model.save(str(out_path))
+    logger.info(f"Saving coupled model to {out_path}...")
+    combined_model.save(str(out_path))
     
     # Save metrics JSON if requested
     if args.metrics_json_path and history and history.history:
@@ -305,7 +315,7 @@ def main():
         with open(args.metrics_json_path, "w") as f:
             json.dump(metrics_dict, f, indent=2)
             
-    logger.info("Training completed successfully!")
+    logger.info("Coupled classification model training completed successfully!")
 
 if __name__ == "__main__":
     main()

@@ -46,6 +46,14 @@ configs/hyperparameter_search/*
 !configs/hyperparameter_search/gridsearch_example.yaml
 !configs/hyperparameter_search/keras_search_example.yaml
 
+# Ignore custom RNN hyperparameter search configurations created by users
+# Keep only the generic search example yaml files
+configs/hyperparameter_search_rnn/*
+!configs/hyperparameter_search_rnn/forecast_gridsearch_example.yaml
+!configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml
+!configs/hyperparameter_search_rnn/drozy_forecast_gridsearch_example.yaml
+!configs/hyperparameter_search_rnn/drozy_classifier_gridsearch_example.yaml
+
 # Ignore custom scalogram generator yaml configurations created by users
 # Keep only the baseline example configs for DROZY and SEED-VIG
 configs/dataset_generation/*
@@ -55,9 +63,12 @@ configs/dataset_generation/*
 !configs/dataset_generation/seedvig_simple_example.yaml
 
 # Ignore custom prediction parameters yaml configurations created by users
-# Keep only the baseline example configs for SEED-VIG
-configs/model_training/*
-!configs/model_training/seedvig_predict_example.yaml
+# Keep only the baseline example configs for SEED-VIG and DROZY
+configs/model_training_rnn_classifier/*
+!configs/model_training_rnn_classifier/seedvig_classify_example.yaml
+!configs/model_training_rnn_classifier/drozy_classify_example.yaml
+configs/model_training_rnn_predictor/*
+!configs/model_training_rnn_predictor/seedvig_predict_example.yaml
 
 # ==============================================================================
 # Miscellaneous and Internal Utilities
