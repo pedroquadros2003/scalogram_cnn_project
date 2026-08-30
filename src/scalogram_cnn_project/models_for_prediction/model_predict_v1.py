@@ -36,10 +36,23 @@ def create_model(parameters):
     features = 1  # 1D single-channel forecasting
     
     model = Sequential([
+        # Input layer
+        # Input shape: (batch_size, input_steps, features)
         Input(shape=(input_steps, features)),
-        GRU(latent_dim, activation='tanh', return_sequences=True),
+        
+        # GRU layer (Direct projection: return_sequences=False to compress sequence to a single state vector)
+        # Input shape: (batch_size, input_steps, features)
+        # Output shape: (batch_size, latent_dim)
         GRU(latent_dim, activation='tanh', return_sequences=False),
+        
+        # Fully connected layer projecting summary vector to output steps
+        # Input shape: (batch_size, latent_dim)
+        # Output shape: (batch_size, output_steps * features)
         Dense(output_steps * features),
+        
+        # Reshape layer matching the target output sequence shape
+        # Input shape: (batch_size, output_steps * features)
+        # Output shape: (batch_size, output_steps, features)
         Reshape((output_steps, features))
     ])
     

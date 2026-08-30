@@ -77,7 +77,8 @@ def main():
     parser.add_argument("--latent-dim", type=int, default=64, help="Latent dim for RNN layer")
     parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--output-model", type=str, default=None, help="Path to save the trained model")
-    parser.add_argument("--subjects", type=int, nargs="+", default=None, help="Subject IDs to filter files for training (e.g. 1 2 5)")
+    parser.add_argument("--subject", type=int, default=None, help="Subject ID to filter files for training (only one subject at a time)")
+    parser.add_argument("--output-plot", type=str, default=None, help="Path to save comparison plot of test/validation split predictions")
     parser.add_argument("--train-split", type=float, default=0.8, help="Fraction of data used for training (chronological split)")
     parser.add_argument("--resample-freq", type=float, default=None, help="Frequency to resample the signal to (Hz) to speed up training")
     parser.add_argument("--force-cpu", action="store_true", help="Force training to run on CPU to avoid GPU VRAM OOM crashes")
@@ -91,7 +92,12 @@ def main():
         with open(args.config, "r") as f:
             yaml_config = yaml.safe_load(f)
         for key, val in yaml_config.items():
-            if hasattr(args, key):
+            if key == "subjects" and hasattr(args, "subject"):
+                if isinstance(val, list) and len(val) > 0:
+                    setattr(args, "subject", val[0])
+                else:
+                    setattr(args, "subject", val)
+            elif hasattr(args, key):
                 setattr(args, key, val)
                 
     if not args.dataset_type:
@@ -118,8 +124,8 @@ def main():
     if not files:
         raise ValueError(f"No signal files found in {data_dir}")
         
-    # Filter files by subject if specified
-    if args.subjects:
+    # Filter files by subject if specified, else default to first valid subject
+    if args.subject is not None:
         filtered_files = []
         for f in files:
             try:
@@ -128,18 +134,46 @@ def main():
                 else:
                     subj_id = int(f.stem.split("-")[0])
                 
-                if subj_id in args.subjects:
+                if subj_id == args.subject:
                     filtered_files.append(f)
             except (ValueError, IndexError):
                 logger.warning(f"Could not parse subject ID from filename: {f.name}. Skipping.")
         files_to_process = filtered_files
-        logger.info(f"Filtered to {len(files_to_process)} files matching subjects: {args.subjects}")
+        logger.info(f"Filtered to {len(files_to_process)} files matching subject: {args.subject}")
     else:
-        # Default behavior: load all files
-        files_to_process = files
-        logger.info(f"No subject filter specified. Processing all {len(files_to_process)} files...")
+        # Enforce single subject by automatically choosing the first parsed subject
+        first_subj_id = None
+        for f in files:
+            try:
+                if args.dataset_type == "seed_vig":
+                    first_subj_id = int(f.stem.split("_")[0])
+                else:
+                    first_subj_id = int(f.stem.split("-")[0])
+                break
+            except (ValueError, IndexError):
+                continue
+        
+        if first_subj_id is not None:
+            filtered_files = []
+            for f in files:
+                try:
+                    if args.dataset_type == "seed_vig":
+                        subj_id = int(f.stem.split("_")[0])
+                    else:
+                        subj_id = int(f.stem.split("-")[0])
+                    if subj_id == first_subj_id:
+                        filtered_files.append(f)
+                except (ValueError, IndexError):
+                    pass
+            files_to_process = filtered_files
+            logger.info(f"No subject specified. Automatically filtered to {len(files_to_process)} files matching first detected subject: {first_subj_id}")
+        else:
+            files_to_process = files[:1]
+            logger.info(f"No subject specified and could not parse subject IDs. Processing only the first file: {[f.name for f in files_to_process]}")
         
     loaded_signals = []
+    loaded_means = []
+    loaded_stds = []
     sfreq = None
     
     for f in files_to_process:
@@ -187,6 +221,8 @@ def main():
             else:
                 normalized_signal = signal - mean
             loaded_signals.append(normalized_signal)
+            loaded_means.append(mean)
+            loaded_stds.append(std)
             
         except Exception as e:
             logger.error(f"Error processing {f.name}: {e}")
@@ -293,6 +329,91 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info(f"Saving model to {out_path}...")
     model.save(str(out_path))
+    
+    # Generate predictions and comparison plot on validation/test split
+    if val_indices and val_seq is not None:
+        logger.info("Generating predictions on the validation/test split for plotting...")
+        predictions = model.predict(val_seq)
+        
+        # Group val_indices by sig_idx
+        from collections import defaultdict
+        val_by_sig = defaultdict(list)
+        for idx_in_val, (sig_idx, start_idx) in enumerate(val_indices):
+            val_by_sig[sig_idx].append((idx_in_val, start_idx))
+            
+        for sig_idx, idxs in val_by_sig.items():
+            # Sort by start_idx to ensure chronological order
+            idxs = sorted(idxs, key=lambda x: x[1])
+            
+            start_idx_first = idxs[0][1]
+            test_start_sample = start_idx_first + input_len
+            
+            start_idx_last = idxs[-1][1]
+            test_end_sample = start_idx_last + input_len + output_len
+            
+            L = test_end_sample - test_start_sample
+            if L <= 0:
+                continue
+                
+            norm_signal = loaded_signals[sig_idx]
+            gt_signal_norm = norm_signal[test_start_sample:test_end_sample]
+            
+            pred_sum = np.zeros(L)
+            pred_count = np.zeros(L)
+            
+            for idx_in_val, start_idx in idxs:
+                offset = start_idx + input_len - test_start_sample
+                pred_window = np.squeeze(predictions[idx_in_val])
+                if pred_window.ndim == 0:
+                    pred_window = np.array([pred_window])
+                pred_sum[offset : offset + len(pred_window)] += pred_window
+                pred_count[offset : offset + len(pred_window)] += 1
+                
+            pred_signal_norm = pred_sum / np.maximum(pred_count, 1)
+            
+            # Denormalize
+            mean = loaded_means[sig_idx]
+            std = loaded_stds[sig_idx]
+            gt_signal = gt_signal_norm * std + mean
+            pred_signal = pred_signal_norm * std + mean
+            
+            # Matplotlib Plotting
+            try:
+                import matplotlib
+                matplotlib.use("Agg")
+                import matplotlib.pyplot as plt
+                
+                plt.figure(figsize=(14, 6))
+                time_axis = np.arange(test_start_sample, test_end_sample) / (sfreq * 60.0)  # Time in minutes
+                
+                plt.plot(time_axis, gt_signal, label="Original Signal (Test Split)", color="blue", alpha=0.7)
+                plt.plot(time_axis, pred_signal, label="Predicted Signal (RNN)", color="red", alpha=0.85)
+                
+                plt.title(f"Comparison of Original vs Predicted Signal - Subject {args.subject or 'default'} (Channel {args.channel})")
+                plt.xlabel("Time (minutes)")
+                plt.ylabel("Amplitude")
+                plt.legend(loc="best")
+                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+                
+                # Determine output plot filename
+                if args.output_plot:
+                    plot_path = Path(args.output_plot)
+                else:
+                    plot_path = out_path.with_suffix(".png")
+                    
+                if len(val_by_sig) > 1:
+                    plot_file = plot_path.parent / f"{plot_path.stem}_file{sig_idx}.png"
+                else:
+                    plot_file = plot_path
+                    
+                plot_file.parent.mkdir(parents=True, exist_ok=True)
+                plt.savefig(str(plot_file), dpi=150, bbox_inches="tight")
+                plt.close()
+                logger.info(f"Saved prediction comparison plot to {plot_file}")
+            except Exception as plot_err:
+                logger.error(f"Failed to generate prediction comparison plot: {plot_err}")
+    else:
+        logger.warning("No validation data available. Skipping comparison plot.")
     
     # Save metrics JSON if requested
     if args.metrics_json_path and history and history.history:

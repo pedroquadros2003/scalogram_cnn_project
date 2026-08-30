@@ -16,7 +16,7 @@ MODEL_TRAIN_PARAMS:
     values: [5]
   batch_size:
     mode: "fixed"
-    values: [32]
+    values: [16]
   dataset_type:
     mode: "fixed"
     values: ["drozy"]
@@ -37,8 +37,7 @@ MODEL_TRAIN_PARAMS:
     values: [0.8]
   resample_freq:
     mode: "fixed"
-    values: [20.0]  # Recommended to downsample signals (e.g. to 20Hz) to prevent VRAM OOM crashes
-  subjects:
-    mode: "fixed"
-    values:
-      - [1, 2, 3]
+    values: [60.0]  # Recommended to downsample signals (e.g. to 20Hz) to prevent VRAM OOM crashes
+  subject:
+    mode: "choice"
+    values: [1, 2, 3]

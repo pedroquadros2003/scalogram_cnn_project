@@ -1,6 +1,6 @@
 import tensorflow as tf
 from keras.models import Sequential
-from keras.layers import LSTM, RepeatVector, TimeDistributed, Dense, Input
+from keras.layers import LSTM, Dense, Input, Reshape
 from keras.optimizers import Adam, SGD, RMSprop
 import logging
 
@@ -14,7 +14,7 @@ OPTIMIZERS = {
 
 def create_model(parameters):
     """
-    Creates an LSTM Seq2Seq (Encoder-Decoder) prediction model.
+    Creates an LSTM prediction model with direct Dense projection to output (LSTM Direct).
     Required keys in parameters:
         - input_steps (int): number of time steps in input sequence.
         - output_steps (int): number of time steps in output sequence.
@@ -25,7 +25,7 @@ def create_model(parameters):
     Returns:
         keras.Model: Compiled Keras Sequential model.
     """
-    logger.info("Initializing LSTM Seq2Seq prediction model...")
+    logger.info("Initializing LSTM Direct prediction model...")
     
     input_steps = parameters["input_steps"]
     output_steps = parameters["output_steps"]
@@ -36,11 +36,24 @@ def create_model(parameters):
     features = 1  # 1D single-channel forecasting
     
     model = Sequential([
+        # Input layer
+        # Input shape: (batch_size, input_steps, features)
         Input(shape=(input_steps, features)),
+        
+        # LSTM layer (Direct projection: return_sequences=False to compress sequence to a single state vector)
+        # Input shape: (batch_size, input_steps, features)
+        # Output shape: (batch_size, latent_dim)
         LSTM(latent_dim, activation='tanh', return_sequences=False),
-        RepeatVector(output_steps),
-        LSTM(latent_dim, activation='tanh', return_sequences=True),
-        TimeDistributed(Dense(features))
+        
+        # Fully connected layer projecting summary vector to output steps
+        # Input shape: (batch_size, latent_dim)
+        # Output shape: (batch_size, output_steps * features)
+        Dense(output_steps * features),
+        
+        # Reshape layer matching the target output sequence shape
+        # Input shape: (batch_size, output_steps * features)
+        # Output shape: (batch_size, output_steps, features)
+        Reshape((output_steps, features))
     ])
     
     opt_class = OPTIMIZERS.get(opt_name.lower(), Adam)

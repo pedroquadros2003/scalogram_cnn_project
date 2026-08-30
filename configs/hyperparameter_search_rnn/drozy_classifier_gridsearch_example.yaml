@@ -11,7 +11,7 @@ MODEL_TRAIN_PARAMS:
     values: [5]
   batch_size:
     mode: "fixed"
-    values: [32]
+    values: [16]
   dataset_type:
     mode: "fixed"
     values: ["drozy"]
@@ -32,7 +32,7 @@ MODEL_TRAIN_PARAMS:
     values: [0.8]
   resample_freq:
     mode: "fixed"
-    values: [20.0]  # Downsample signals to match the pre-trained RNN forecaster sampling rate
+    values: [60.0]  # Downsample signals to match the pre-trained RNN forecaster sampling rate
   subjects:
     mode: "fixed"
     values:

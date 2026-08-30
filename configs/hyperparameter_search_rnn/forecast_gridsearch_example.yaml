@@ -16,7 +16,7 @@ MODEL_TRAIN_PARAMS:
     values: [5]
   batch_size:
     mode: "fixed"
-    values: [32]
+    values: [16]
   dataset_type:
     mode: "fixed"
     values: ["seed_vig"]
@@ -37,8 +37,7 @@ MODEL_TRAIN_PARAMS:
     values: [0.8]
   resample_freq:
     mode: "fixed"
-    values: [100.0]  # Downsample signals to match the pre-trained RNN forecaster sampling rate
-  subjects:
-    mode: "fixed"
-    values:
-      - [1, 2, 3]
+    values: [60.0]  # Downsample signals to match the pre-trained RNN forecaster sampling rate
+  subject:
+    mode: "choice"
+    values: [1, 2, 3]

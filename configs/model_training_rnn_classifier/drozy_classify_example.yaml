@@ -12,12 +12,15 @@ input_min: 5.0      # Input window duration in minutes
 predict_min: 2.0    # Output prediction/forecasting duration in minutes
 stride_sec: 30.0    # Window sliding stride in seconds
 
+# Frequency resampling
+resample_freq: 60.0
+
 # Pre-trained RNN model path to couple with the MLP
 rnn_model_path: "outputs/models/rnn_predict_v0_drozy_C3.h5"
 
 # MLP Training hyperparameters
 epochs: 10
-batch_size: 32
+batch_size: 16
 learning_rate: 0.001
 train_split: 0.8
 

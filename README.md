@@ -582,20 +582,20 @@ This module provides a pipeline to forecast physiological/EEG signals into subse
 * **`src/scalogram_cnn_project/utils/plot_results.py`**: Formats and draws comparison plots showing the input (past) signal, the predicted future signal, and the actual ground truth signal (if available in the file).
 
 ### Recurrent Model Architectures (`models_for_prediction/`)
-* **`model_predict_v0.py`**: Implements an **LSTM Encoder-Decoder (Seq2Seq)** architecture for sequence-to-sequence time series prediction.
+* **`model_predict_v0.py`**: Implements an **LSTM Direct Projection** architecture, mapping a sequence to future samples using an LSTM encoder and a dense projection layer (optimized for memory usage and training speed with long sequences).
 * **`model_predict_v1.py`**: Implements a **GRU Direct Projection** architecture, mapping a sequence to future samples using a dense projection layer.
 * **`model_predict_builder.py`**: Factory function to dynamically instantiate and compile prediction models based on a version code (e.g. `v0`, `v1`) and a parameters dictionary.
 
 ---
 
-## 2. Parameter Configurations (`configs/model_training/`)
+## 2. Parameter Configurations (`configs/model_training_rnn_predictor/`)
 
-Configuration templates for prediction models are placed under the `/configs/model_training` directory.
-Example: `/configs/model_training/seedvig_predict_example.yaml`
+Configuration templates for prediction models are placed under the `/configs/model_training_rnn_predictor` directory.
+Example: `/configs/model_training_rnn_predictor/seedvig_predict_example.yaml`
 ```yaml
 dataset_type: "seed_vig"
 channel: "O1"
-subjects: [1, 2, 3]       # Subject IDs to filter training files
+subject: 1                # Subject ID to filter training files (only one subject at a time)
 model_version: "v0"
 input_min: 5.0            # Input window duration in minutes
 predict_min: 2.0          # Future prediction duration in minutes
@@ -608,6 +608,7 @@ train_split: 0.8          # Chronological train/validation fraction
 resample_freq: null       # Optional downsampling frequency in Hz (e.g. 20.0 to speed up)
 force_cpu: false          # Set to true to force CPU execution and avoid GPU OOMs
 output_model: null
+output_plot: null         # Path to save comparison plot (defaults to model path with .png suffix)
 ```
 
 ---
@@ -616,7 +617,7 @@ output_model: null
 
 ### A. Training the RNN Forecaster
 
-Run `experiments/train_rnn.py` to train a model. The script supports loading parameters from a YAML file via `--config`, filtering subjects via `--subjects`, and setting the chronological train-test split via `--train-split`.
+Run `experiments/train_rnn.py` to train a model. The script supports loading parameters from a YAML file via `--config`, filtering the subject via `--subject` (only one subject per run is allowed), and setting the chronological train-test split via `--train-split`.
 
 #### Data Leakage Prevention (Overlap Gap Rejection)
 To prevent temporal data leakage caused by overlapping sliding windows, the script performs a chronological split *per file*. It calculates the overlapping transition gap:
@@ -630,12 +631,12 @@ EEG signals typically have high sampling rates (e.g. 200 Hz). Training RNNs dire
 
 * **Training via YAML config**:
   ```bash
-  python3 experiments/train_rnn.py --config configs/model_training/seedvig_predict_example.yaml
+  python3 experiments/train_rnn.py --config configs/model_training_rnn_predictor/seedvig_predict_example.yaml
   ```
 
 * **Training via CLI overrides**:
   ```bash
-  python3 experiments/train_rnn.py --dataset-type seed_vig --channel O1 --model-version v0 --subjects 1 2 3 --epochs 15 --train-split 0.75 --resample-freq 20.0 --force-cpu
+  python3 experiments/train_rnn.py --dataset-type seed_vig --channel O1 --model-version v0 --subject 1 --epochs 15 --train-split 0.75 --resample-freq 20.0 --force-cpu
   ```
 
 ### B. Running Predictions (run_pipeline)
@@ -785,6 +786,9 @@ Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
     resample_freq:
       mode: "fixed"
       values: [20.0]
+    subject:
+      mode: "choice"
+      values: [1, 2, 3]
   ```
 
 * **RNN Coupled Classification Search** (e.g. `configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml`):
@@ -839,6 +843,9 @@ Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
     resample_freq:
       mode: "fixed"
       values: [20.0]
+    subject:
+      mode: "choice"
+      values: [1, 2, 3]
   ```
 
 * **DROZY Coupled Classification Search** (e.g. `configs/hyperparameter_search_rnn/drozy_classifier_gridsearch_example.yaml`):
@@ -893,7 +900,17 @@ Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
 
 ---
 
-## 3. Running Grid Search Integration Tests
+## 3. Outputs and Logs
+
+The grid search script automatically saves all outputs and progress in the designated output folder (inside `outputs/`):
+* **`progress.json`**: Tracks the evaluation status (validation metrics or `FAILED`) of each candidate (allowing safe execution resume).
+* **`param_registry.json`**: Registry maps each candidate ID to its respective hyperparameter combination.
+* **`log.txt`**: Automatically captures all console logs, parent messages, and real-time outputs (including warnings, TensorFlow outputs, and Keras training progress) of the child subprocesses.
+* **Model Weights (`.h5` files)**: Keeps unique saved weights corresponding to each successful candidate.
+
+---
+
+## 4. Running Grid Search Integration Tests
 
 To run the integration tests verifying the grid search functionality:
 ```bash

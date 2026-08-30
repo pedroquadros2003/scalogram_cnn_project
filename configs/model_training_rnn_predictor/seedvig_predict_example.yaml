@@ -4,8 +4,8 @@ dataset_type: "seed_vig"
 # Channel name to train on
 channel: "O1"
 
-# Subject IDs to filter files for training (omit or set to null to process all files)
-subjects: [1, 2, 3]
+# Subject ID to filter files for training (omit or set to null to default to first subject)
+subject: 1
 
 # Model version to train ("v0" for LSTM Seq2Seq, "v1" for GRU Direct)
 model_version: "v0"

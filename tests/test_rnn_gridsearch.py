@@ -133,9 +133,16 @@ class TestRNNGridSearch(unittest.TestCase):
         self.assertTrue((search_out_dir / "progress.json").exists())
         self.assertTrue((search_out_dir / "param_registry.json").exists())
         
-        # Verify that model weights files are created
-        self.assertTrue((search_out_dir / "rnn_predict_cand_00000.h5").exists())
-        self.assertTrue((search_out_dir / "rnn_predict_cand_00001.h5").exists())
+        # Verify results.jsonl and hash-based model weights files are created
+        jsonl_path = search_out_dir / "results.jsonl"
+        self.assertTrue(jsonl_path.exists())
+        with open(jsonl_path, "r") as f:
+            lines = [json.loads(line) for line in f if line.strip()]
+        self.assertEqual(len(lines), 2)
+        
+        for entry in lines:
+            hash_id = entry["hash_id"]
+            self.assertTrue((search_out_dir / f"rnn_predict_{hash_id}.h5").exists())
         
         # 2. Create a search space YAML config for classification
         classifier_config = {
@@ -180,7 +187,7 @@ class TestRNNGridSearch(unittest.TestCase):
                 },
                 "rnn_model_path": {
                     "mode": "fixed",
-                    "values": [str(search_out_dir / "rnn_predict_cand_00000.h5")]
+                    "values": [str(search_out_dir / lines[0]["model_path"])]
                 }
             }
         }
@@ -207,8 +214,16 @@ class TestRNNGridSearch(unittest.TestCase):
         clf_out_dir = workspace_root / "outputs" / "test_classifier_search"
         self.assertTrue((clf_out_dir / "progress.json").exists())
         self.assertTrue((clf_out_dir / "param_registry.json").exists())
-        self.assertTrue((clf_out_dir / "combined_predict_classifier_cand_00000.h5").exists())
-        self.assertTrue((clf_out_dir / "combined_predict_classifier_cand_00001.h5").exists())
+        # Verify results.jsonl and hash-based classifier model weights files are created
+        clf_jsonl_path = clf_out_dir / "results.jsonl"
+        self.assertTrue(clf_jsonl_path.exists())
+        with open(clf_jsonl_path, "r") as f:
+            clf_lines = [json.loads(line) for line in f if line.strip()]
+        self.assertEqual(len(clf_lines), 2)
+        
+        for entry in clf_lines:
+            hash_id = entry["hash_id"]
+            self.assertTrue((clf_out_dir / f"combined_predict_classifier_{hash_id}.h5").exists())
 
 if __name__ == "__main__":
     unittest.main()

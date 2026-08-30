@@ -10,6 +10,7 @@ import yaml
 
 from scalogram_cnn_project.utils.dict_product import dict_product
 from scalogram_cnn_project.utils.simplify_config_space import simplify_config_space
+from scalogram_cnn_project.utils.make_hash_id import make_hash_id
 import scalogram_cnn_project.settings.config as config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -58,6 +59,12 @@ def main():
     output_dir = config.OUTPUT_DIR / args.output_folder
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    log_file_path = output_dir / "log.txt"
+    # Configure logging to also write to log.txt inside the output directory
+    file_handler = logging.FileHandler(log_file_path, mode="a")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logging.getLogger().addHandler(file_handler)
+    
     progress_file = output_dir / "progress.json"
     registry_file = output_dir / "param_registry.json"
     
@@ -76,23 +83,27 @@ def main():
     
     for cand in grid_candidates:
         cand_id = cand["candidate_id"]
+        params = param_registry[cand_id]
+        hash_id = make_hash_id(params, prefix="model", size=10)
+        
         if cand_id in results:
-            logger.info(f"Skipping {cand_id} (already evaluated)")
-            val_loss = results[cand_id].get("val_loss") if isinstance(results[cand_id], dict) else results[cand_id]
-            if val_loss is not None and val_loss < best_loss:
-                best_loss = val_loss
-                best_cand = cand_id
+            logger.info(f"Skipping {cand_id} ({hash_id}) (already evaluated)")
+            if isinstance(results[cand_id], dict):
+                val_loss = results[cand_id].get("val_loss")
+                if val_loss is not None and val_loss < best_loss:
+                    best_loss = val_loss
+                    best_cand = cand_id
             continue
             
-        logger.info(f"Evaluating candidate {cand_id}/{len(grid_candidates)-1}...")
+        logger.info(f"Evaluating candidate {cand_id}/{len(grid_candidates)-1} (hash: {hash_id})...")
         
         # Write candidate config to temporary file
-        temp_config_path = output_dir / f"temp_{cand_id}.yaml"
+        temp_config_path = output_dir / f"temp_{hash_id}.yaml"
         with open(temp_config_path, "w") as f:
-            yaml.dump(param_registry[cand_id], f, default_flow_style=False)
+            yaml.dump(params, f, default_flow_style=False)
             
         # Target metrics JSON file
-        metrics_json_path = output_dir / f"metrics_{cand_id}.json"
+        metrics_json_path = output_dir / f"metrics_{hash_id}.json"
         
         # Subprocess command
         cmd = [
@@ -100,7 +111,7 @@ def main():
             "--config", str(temp_config_path),
             "--metrics-json-path", str(metrics_json_path),
             # Save weights uniquely per candidate
-            "--output-model", str(output_dir / f"rnn_predict_{cand_id}.h5")
+            "--output-model", str(output_dir / f"rnn_predict_{hash_id}.h5")
         ]
         if args.force_cpu:
             cmd.append("--force-cpu")
@@ -111,22 +122,53 @@ def main():
         env["PYTHONPATH"] = str(workspace_root / "src") + os.pathsep + env.get("PYTHONPATH", "")
         
         try:
-            res = subprocess.run(cmd, env=env)
-            if res.returncode == 0 and metrics_json_path.exists():
+            process = subprocess.Popen(
+                cmd,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+            
+            # Read from process stdout line by line and print + write to log file
+            with open(log_file_path, "a") as log_file:
+                for line in process.stdout:
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                    log_file.write(line)
+                    log_file.flush()
+                    
+            return_code = process.wait()
+            
+            if return_code == 0 and metrics_json_path.exists():
                 with open(metrics_json_path, "r") as f:
                     metrics = json.load(f)
                 val_loss = metrics.get("val_loss", float("inf"))
                 results[cand_id] = metrics
-                logger.info(f"Candidate {cand_id} completed. Metrics: {metrics}")
+                logger.info(f"Candidate {cand_id} ({hash_id}) completed. Metrics: {metrics}")
+                
+                # Document candidate run in results.jsonl
+                jsonl_entry = {
+                    "hash_id": hash_id,
+                    "candidate_id": cand_id,
+                    "parameters": params,
+                    "metrics": metrics,
+                    "model_path": f"rnn_predict_{hash_id}.h5",
+                    "plot_path": f"rnn_predict_{hash_id}.png"
+                }
+                jsonl_file_path = output_dir / "results.jsonl"
+                with open(jsonl_file_path, "a") as jsonl_file:
+                    jsonl_file.write(json.dumps(jsonl_entry) + "\n")
                 
                 if val_loss < best_loss:
                     best_loss = val_loss
                     best_cand = cand_id
             else:
-                logger.error(f"Candidate {cand_id} failed with exit code: {res.returncode}")
+                logger.error(f"Candidate {cand_id} ({hash_id}) failed with exit code: {return_code}")
                 results[cand_id] = "FAILED"
         except Exception as e:
-            logger.error(f"Error executing candidate {cand_id}: {e}")
+            logger.error(f"Error executing candidate {cand_id} ({hash_id}): {e}")
             results[cand_id] = "FAILED"
         finally:
             # Cleanup temporary config and metrics files
