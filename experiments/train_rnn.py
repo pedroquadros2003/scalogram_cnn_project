@@ -63,6 +63,33 @@ class BatchProgressCallback(tf.keras.callbacks.Callback):
         loss = logs.get('loss', 0.0) if logs else 0.0
         print(f"Processed {self.processed}/{self.total_samples} sample pairs - loss: {loss:.6f}", flush=True)
 
+def compute_window_lengths(args, sfreq):
+    # Input length
+    if args.input_steps is not None:
+        input_len = int(args.input_steps)
+    elif args.input_sec is not None:
+        input_len = max(1, int(round(args.input_sec * sfreq)))
+    else:
+        input_len = max(1, int(round(args.input_min * 60.0 * sfreq)))
+        
+    # Output length
+    if args.predict_steps is not None:
+        output_len = int(args.predict_steps)
+    elif args.predict_sec is not None:
+        output_len = max(1, int(round(args.predict_sec * sfreq)))
+    else:
+        output_len = max(1, int(round(args.predict_min * 60.0 * sfreq)))
+        
+    # Stride length
+    if args.stride_steps is not None:
+        stride = int(args.stride_steps)
+    elif args.stride_sec is not None:
+        stride = max(1, int(round(args.stride_sec * sfreq)))
+    else:
+        stride = 1 if output_len == 1 else max(1, int(round(30.0 * sfreq)))
+        
+    return input_len, output_len, stride
+
 def main():
     parser = argparse.ArgumentParser(description="Train RNN model for signal forecasting.")
     parser.add_argument("--config", type=str, default=None, help="Path to YAML configuration file")
@@ -81,6 +108,13 @@ def main():
     parser.add_argument("--output-plot", type=str, default=None, help="Path to save comparison plot of test/validation split predictions")
     parser.add_argument("--train-split", type=float, default=0.8, help="Fraction of data used for training (chronological split)")
     parser.add_argument("--resample-freq", type=float, default=None, help="Frequency to resample the signal to (Hz) to speed up training")
+    parser.add_argument("--optimizer-name", type=str, default="adam", choices=["adam", "rmsprop", "sgd"], help="Optimizer for training (e.g. adam, rmsprop, sgd)")
+    parser.add_argument("--input-sec", type=float, default=None, help="Input window duration in seconds (overrides input-min)")
+    parser.add_argument("--predict-sec", type=float, default=None, help="Output prediction duration in seconds (overrides predict-min)")
+    parser.add_argument("--input-steps", type=int, default=None, help="Input window duration in exact timesteps")
+    parser.add_argument("--predict-steps", type=int, default=None, help="Output prediction duration in exact timesteps")
+    parser.add_argument("--stride-steps", type=int, default=None, help="Window sliding stride in exact timesteps")
+    parser.add_argument("--max-train-samples", type=int, default=None, help="Optional maximum number of training samples to use")
     parser.add_argument("--force-cpu", action="store_true", help="Force training to run on CPU to avoid GPU VRAM OOM crashes")
     parser.add_argument("--metrics-json-path", type=str, default=None, help="Path to save final training and validation metrics as JSON")
     
@@ -195,9 +229,7 @@ def main():
             # Calculate training portion boundaries to avoid data leakage during normalization
             num_samples = len(signal)
             file_sfreq = signal_data.sfreq
-            file_input_len = int(args.input_min * 60.0 * file_sfreq)
-            file_output_len = int(args.predict_min * 60.0 * file_sfreq)
-            file_stride = int(args.stride_sec * file_sfreq)
+            file_input_len, file_output_len, file_stride = compute_window_lengths(args, file_sfreq)
             
             # Count windows
             n_pairs = 0
@@ -230,9 +262,9 @@ def main():
     if not loaded_signals:
         raise ValueError("No training samples were generated. Check channel name, data and train_split.")
         
-    input_len = int(args.input_min * 60.0 * sfreq)
-    output_len = int(args.predict_min * 60.0 * sfreq)
-    stride = int(args.stride_sec * sfreq)
+    input_len, output_len, stride = compute_window_lengths(args, sfreq)
+    logger.info(f"Resolved window parameters: input_len={input_len} steps ({input_len/sfreq:.2f}s), "
+                f"output_len={output_len} steps ({output_len/sfreq:.2f}s), stride={stride} steps ({stride/sfreq:.2f}s)")
     
     train_indices = []
     val_indices = []
@@ -266,6 +298,10 @@ def main():
     if not train_indices:
         raise ValueError("No training samples were generated. Check channel name, data and train_split.")
         
+    if args.max_train_samples is not None and len(train_indices) > args.max_train_samples:
+        logger.info(f"Limiting train samples from {len(train_indices)} to {args.max_train_samples} (via --max-train-samples)...")
+        train_indices = train_indices[:args.max_train_samples]
+        
     train_seq = SignalSequence(
         loaded_signals=loaded_signals,
         indices=train_indices,
@@ -294,7 +330,7 @@ def main():
         "input_steps": input_len,
         "output_steps": output_len,
         "latent_dim": args.latent_dim,
-        "optimizer_name": "adam",
+        "optimizer_name": args.optimizer_name,
         "learning_rate": args.learning_rate
     }
     
@@ -302,7 +338,7 @@ def main():
     model.summary()
     
     # Train
-    logger.info("Starting model training...")
+    logger.info(f"Starting model training with optimizer '{args.optimizer_name}' (lr={args.learning_rate})...")
     progress_callback = BatchProgressCallback(total_samples=len(train_indices), batch_size=args.batch_size)
     
     history = model.fit(
@@ -330,9 +366,12 @@ def main():
     logger.info(f"Saving model to {out_path}...")
     model.save(str(out_path))
     
+    # Extra evaluation metrics container
+    extra_metrics = {}
+    
     # Generate predictions and comparison plot on validation/test split
     if val_indices and val_seq is not None:
-        logger.info("Generating predictions on the validation/test split for plotting...")
+        logger.info("Generating predictions on the validation/test split for plotting and metric evaluation...")
         predictions = model.predict(val_seq)
         
         # Group val_indices by sig_idx
@@ -358,18 +397,63 @@ def main():
             norm_signal = loaded_signals[sig_idx]
             gt_signal_norm = norm_signal[test_start_sample:test_end_sample]
             
-            pred_sum = np.zeros(L)
-            pred_count = np.zeros(L)
-            
+            # Reconstruct prediction using Shortest Horizon / Freshest Window (avoids destructive averaging)
+            pred_signal_norm = np.full(L, np.nan, dtype=np.float32)
+            best_horizon = np.full(L, np.inf, dtype=np.float32)
+
             for idx_in_val, start_idx in idxs:
                 offset = start_idx + input_len - test_start_sample
                 pred_window = np.squeeze(predictions[idx_in_val])
                 if pred_window.ndim == 0:
                     pred_window = np.array([pred_window])
-                pred_sum[offset : offset + len(pred_window)] += pred_window
-                pred_count[offset : offset + len(pred_window)] += 1
+                    
+                window_len = len(pred_window)
+                end_offset = offset + window_len
+                if end_offset > L:
+                    pred_window = pred_window[:L - offset]
+                    window_len = len(pred_window)
+                    end_offset = offset + window_len
+                    
+                if offset < 0:
+                    pred_window = pred_window[-offset:]
+                    window_len = len(pred_window)
+                    offset = 0
+                    end_offset = offset + window_len
+                    
+                horizons = np.arange(window_len, dtype=np.float32)
+                sub_pred = pred_signal_norm[offset:end_offset]
+                sub_best = best_horizon[offset:end_offset]
+                update_mask = horizons < sub_best
+                sub_pred[update_mask] = pred_window[update_mask]
+                sub_best[update_mask] = horizons[update_mask]
                 
-            pred_signal_norm = pred_sum / np.maximum(pred_count, 1)
+            # If any gap/uncovered points remain NaN, fill with 0.0
+            if np.isnan(pred_signal_norm).any():
+                pred_signal_norm[np.isnan(pred_signal_norm)] = 0.0
+            
+            # Compute detailed evaluation metrics
+            val_mse = float(np.mean((pred_signal_norm - gt_signal_norm) ** 2))
+            val_mae = float(np.mean(np.abs(pred_signal_norm - gt_signal_norm)))
+            gt_std_norm = float(np.std(gt_signal_norm))
+            pred_std_norm = float(np.std(pred_signal_norm))
+            val_amp_ratio = float(pred_std_norm / max(gt_std_norm, 1e-6))
+            if gt_std_norm > 1e-6 and pred_std_norm > 1e-6:
+                val_pearson_corr = float(np.corrcoef(gt_signal_norm, pred_signal_norm)[0, 1])
+            else:
+                val_pearson_corr = 0.0
+                
+            logger.info("==========================================")
+            logger.info(f"📊 Validation Reconstruction Metrics (File {sig_idx}):")
+            logger.info(f"  - Validation MSE: {val_mse:.6f}")
+            logger.info(f"  - Validation MAE: {val_mae:.6f}")
+            logger.info(f"  - Pearson Correlation (r): {val_pearson_corr:.4f}")
+            logger.info(f"  - Amplitude Tracking Ratio (σ_pred / σ_gt): {val_amp_ratio*100:.2f}%")
+            logger.info("==========================================")
+            
+            extra_metrics["val_mse"] = val_mse
+            extra_metrics["val_mae"] = val_mae
+            extra_metrics["val_pearson_corr"] = val_pearson_corr
+            extra_metrics["val_amp_ratio"] = val_amp_ratio
             
             # Denormalize
             mean = loaded_means[sig_idx]
@@ -377,23 +461,50 @@ def main():
             gt_signal = gt_signal_norm * std + mean
             pred_signal = pred_signal_norm * std + mean
             
-            # Matplotlib Plotting
+            # Matplotlib Plotting (Ultra-wide high-resolution visualization)
             try:
                 import matplotlib
                 matplotlib.use("Agg")
                 import matplotlib.pyplot as plt
                 
-                plt.figure(figsize=(14, 6))
-                time_axis = np.arange(test_start_sample, test_end_sample) / (sfreq * 60.0)  # Time in minutes
+                # Create a massive, ultra-high resolution horizontal plot (72 inches wide, 300 DPI -> ~21,600 pixels)
+                fig, (ax_full, ax_zoom) = plt.subplots(2, 1, figsize=(72, 12), gridspec_kw={'height_ratios': [1.2, 1.0]})
+                time_axis_min = np.arange(test_start_sample, test_end_sample) / (sfreq * 60.0)  # Time in minutes
+                time_axis_sec = np.arange(test_start_sample, test_end_sample) / sfreq          # Time in seconds
                 
-                plt.plot(time_axis, gt_signal, label="Original Signal (Test Split)", color="blue", alpha=0.7)
-                plt.plot(time_axis, pred_signal, label="Predicted Signal (RNN)", color="red", alpha=0.85)
+                # Panel 1: Full Test Split Overview (Ultra-wide panorama)
+                ax_full.plot(time_axis_min, gt_signal, label="Original Signal (Ground Truth)", color="#1f77b4", alpha=0.75, linewidth=0.8)
+                ax_full.plot(time_axis_min, pred_signal, label="Predicted Signal (RNN)", color="#d62728", alpha=0.9, linewidth=1.0)
+                ax_full.set_title(
+                    f"Full Test Split Overview - Subject {args.subject or 'default'} (Channel {args.channel}) | "
+                    f"Pearson r: {val_pearson_corr:.4f} | Amp Ratio: {val_amp_ratio*100:.1f}% | MSE: {val_mse:.4f} | Opt: {args.optimizer_name}",
+                    fontsize=15, fontweight='bold'
+                )
+                ax_full.set_xlabel("Time (minutes)", fontsize=13)
+                ax_full.set_ylabel("Amplitude (μV)", fontsize=13)
+                ax_full.legend(loc="upper right", framealpha=0.9, fontsize=12)
+                ax_full.grid(True, which='major', color='#cccccc', linestyle='-', linewidth=0.7)
+                ax_full.grid(True, which='minor', color='#ebebeb', linestyle=':', linewidth=0.5)
+                ax_full.minorticks_on()
                 
-                plt.title(f"Comparison of Original vs Predicted Signal - Subject {args.subject or 'default'} (Channel {args.channel})")
-                plt.xlabel("Time (minutes)")
-                plt.ylabel("Amplitude")
-                plt.legend(loc="best")
-                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+                # Panel 2: Detailed High-Resolution Waveform Zoom (First 60 seconds or first 500 samples)
+                zoom_samples = min(int(60.0 * sfreq), len(gt_signal))
+                if zoom_samples > 0:
+                    zoom_time = time_axis_sec[:zoom_samples] - time_axis_sec[0] # Relative seconds
+                    ax_zoom.plot(zoom_time, gt_signal[:zoom_samples], label="Original Signal (Zoom)", color="#1f77b4", alpha=0.8, linewidth=1.2)
+                    ax_zoom.plot(zoom_time, pred_signal[:zoom_samples], label="Predicted Signal (Zoom)", color="#d62728", alpha=0.95, linewidth=1.4)
+                    ax_zoom.set_title(
+                        f"Detailed Waveform Zoom View (First {zoom_samples/sfreq:.1f}s of Test Split)",
+                        fontsize=15, fontweight='bold'
+                    )
+                    ax_zoom.set_xlabel("Time (seconds)", fontsize=13)
+                    ax_zoom.set_ylabel("Amplitude (μV)", fontsize=13)
+                    ax_zoom.legend(loc="upper right", framealpha=0.9, fontsize=12)
+                    ax_zoom.grid(True, which='major', color='#cccccc', linestyle='-', linewidth=0.7)
+                    ax_zoom.grid(True, which='minor', color='#ebebeb', linestyle=':', linewidth=0.5)
+                    ax_zoom.minorticks_on()
+                
+                plt.tight_layout()
                 
                 # Determine output plot filename
                 if args.output_plot:
@@ -407,21 +518,24 @@ def main():
                     plot_file = plot_path
                     
                 plot_file.parent.mkdir(parents=True, exist_ok=True)
-                plt.savefig(str(plot_file), dpi=150, bbox_inches="tight")
-                plt.close()
-                logger.info(f"Saved prediction comparison plot to {plot_file}")
+                plt.savefig(str(plot_file), dpi=300, bbox_inches="tight")
+                plt.close(fig)
+                logger.info(f"Saved ultra-wide high-resolution prediction comparison plot to {plot_file}")
             except Exception as plot_err:
                 logger.error(f"Failed to generate prediction comparison plot: {plot_err}")
     else:
         logger.warning("No validation data available. Skipping comparison plot.")
     
     # Save metrics JSON if requested
-    if args.metrics_json_path and history and history.history:
+    if args.metrics_json_path:
         import json
         metrics_dict = {}
-        for metric_name, values in history.history.items():
-            if values:
-                metrics_dict[metric_name] = float(values[-1])
+        if history and history.history:
+            for metric_name, values in history.history.items():
+                if values:
+                    metrics_dict[metric_name] = float(values[-1])
+        # Add extra validation metrics
+        metrics_dict.update(extra_metrics)
         logger.info(f"Saving final metrics to {args.metrics_json_path}...")
         with open(args.metrics_json_path, "w") as f:
             json.dump(metrics_dict, f, indent=2)

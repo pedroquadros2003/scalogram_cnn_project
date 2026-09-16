@@ -569,7 +569,7 @@ one can find example `.yaml` configuration files for generating scalograms (both
 
 **Description**
 
-This module provides a pipeline to forecast physiological/EEG signals into subsequent future minutes (signal reconstruction) using Recurrent Neural Networks (RNNs) in Keras/TensorFlow. The pipeline is designed to load signals in a database-agnostic manner, train forecasting models using chronological splits to avoid data leakage, run inference, and plot comparisons.
+This module provides a pipeline to forecast physiological/EEG signals into subsequent future timesteps or minutes (signal reconstruction) using Recurrent Neural Networks (RNNs) in Keras/TensorFlow. The pipeline is designed to load signals in a database-agnostic manner, train forecasting models using strict chronological splits to avoid data leakage, reconstruct continuous time series using freshest-window aggregation, and evaluate fidelity using correlation, amplitude, and error metrics.
 
 
 ---
@@ -577,74 +577,113 @@ This module provides a pipeline to forecast physiological/EEG signals into subse
 ## 1. Project Organization
 
 ### Data Abstraction (`utils/`)
-* **`src/scalogram_cnn_project/utils/signal_data.py`**: Contains `SignalData`, a unified class storing 2D raw signal time-series, channel names, and sampling frequency. It provides helper methods to extract individual channels and slice specific time windows (in minutes).
+* **`src/scalogram_cnn_project/utils/signal_data.py`**: Contains `SignalData`, a unified class storing 2D raw signal time-series, channel names, and sampling frequency. It provides helper methods to extract individual channels, resample frequencies, and slice specific time windows.
 * **`src/scalogram_cnn_project/utils/signal_loader.py`**: Contains `SignalLoader`, exposing static methods to load SEED-VIG (`.mat` structs) and DROZY (`.edf` via MNE) signal files and parse them into standardized `SignalData` objects.
-* **`src/scalogram_cnn_project/utils/plot_results.py`**: Formats and draws comparison plots showing the input (past) signal, the predicted future signal, and the actual ground truth signal (if available in the file).
+* **`src/scalogram_cnn_project/utils/plot_results.py`**: Formats and draws high-resolution dual-panel comparison plots (panorama + 60-second zoom) displaying ground truth, prediction, and fidelity metrics.
 
 ### Recurrent Model Architectures (`models_for_prediction/`)
-* **`model_predict_v0.py`**: Implements an **LSTM Direct Projection** architecture, mapping a sequence to future samples using an LSTM encoder and a dense projection layer (optimized for memory usage and training speed with long sequences).
-* **`model_predict_v1.py`**: Implements a **GRU Direct Projection** architecture, mapping a sequence to future samples using a dense projection layer.
-* **`model_predict_builder.py`**: Factory function to dynamically instantiate and compile prediction models based on a version code (e.g. `v0`, `v1`) and a parameters dictionary.
+* **`model_predict_v0.py`**: Implements an **LSTM Direct Projection** architecture, mapping an input sequence to future horizon steps using an LSTM recurrent backbone and a dense projection layer.
+* **`model_predict_v1.py`**: Implements a **GRU Direct Projection** architecture, mapping an input sequence to future horizon steps using a gated recurrent unit backbone.
+* **`model_predict_builder.py`**: Factory function to dynamically instantiate and compile prediction models based on a version code (`v0` for LSTM, `v1` for GRU), optimizer (`adam`, `rmsprop`, `sgd`), and learning rate.
 
 ---
 
 ## 2. Parameter Configurations (`configs/model_training_rnn_predictor/`)
 
-Configuration templates for prediction models are placed under the `/configs/model_training_rnn_predictor` directory.
-Example: `/configs/model_training_rnn_predictor/seedvig_predict_example.yaml`
+Configuration templates for prediction models are placed under `/configs/model_training_rnn_predictor/` or `/configs/hyperparameter_search_rnn/`.
+
+Example configuration:
 ```yaml
 dataset_type: "seed_vig"
-channel: "O1"
+channel: "CP2"
 subject: 1                # Subject ID to filter training files (only one subject at a time)
-model_version: "v0"
-input_min: 5.0            # Input window duration in minutes
-predict_min: 2.0          # Future prediction duration in minutes
-stride_sec: 30.0          # Stride for sliding windows
+model_version: "v0"       # "v0" for LSTM, "v1" for GRU
+optimizer_name: "rmsprop" # "adam", "rmsprop", or "sgd"
+
+# Temporal Window Definition (supports minutes, seconds, or exact discrete timesteps):
+# Option A: Duration in minutes
+# input_min: 5.0
+# predict_min: 2.0
+# stride_sec: 30.0
+
+# Option B: Duration in seconds
+# input_sec: 30.0
+# predict_sec: 30.0
+# stride_sec: 1.0
+
+# Option C: Exact discrete timesteps (e.g., 1-step ahead forecasting at 100 Hz = 10 ms horizon)
+input_steps: 100          # 1.0 second past context at 100 Hz
+predict_steps: 1          # 1 step ahead (10 ms horizon)
+stride_steps: 1           # Stride of 1 sample
+
 epochs: 10
-batch_size: 32
-latent_dim: 64
+batch_size: 64
+latent_dim: 32
 learning_rate: 0.001
-train_split: 0.8          # Chronological train/validation fraction
-resample_freq: null       # Optional downsampling frequency in Hz (e.g. 20.0 to speed up)
-force_cpu: false          # Set to true to force CPU execution and avoid GPU OOMs
+train_split: 0.8          # Chronological train/validation fraction (first 80% train, last 20% test)
+resample_freq: 100.0      # Resampling frequency in Hz (e.g. 100.0 Hz to retain Beta/Gamma dynamics)
+force_cpu: false          # Set to true to force CPU execution and avoid GPU VRAM allocation crashes
+max_train_samples: null   # Optional cap on training samples for rapid prototyping
 output_model: null
-output_plot: null         # Path to save comparison plot (defaults to model path with .png suffix)
+output_plot: null         # Path to save high-resolution comparison plot
 ```
 
 ---
 
-## 3. Execution and Usage Examples
+## 3. Core Methodologies and Execution
 
-### A. Training the RNN Forecaster
+### A. Data Leakage Prevention & Z-Score Normalization
+To guarantee zero data contamination and ensure numerical stability:
+1. **Chronological Partitioning**: The continuous signal is strictly split chronologically (e.g., the first 80% for training and the remaining 20% for validation/testing).
+2. **Transition Gap Rejection**: To avoid temporal leakage from sliding windows overlapping the train/test boundary, a gap is discarded:
+   $$\text{neglected\_windows} = \lceil \frac{T_{in} + T_{out}}{\text{stride}} \rceil$$
+3. **No Leakage $z$-Score Scaling**: Normalization statistics ($\mu_{\text{train}}$, $\sigma_{\text{train}}$) are computed **strictly on the training partition**. The test partition is standardized using the exact same $(\mu_{\text{train}}, \sigma_{\text{train}})$.
+4. **Physical Scale Invariance**: Model predictions in standardized units are mapped back to original physical units ($\mu\text{V}$) via $y_{\text{phys}} = \hat{y} \cdot \sigma_{\text{train}} + \mu_{\text{train}}$, avoiding precision underflow while preserving physical voltage scales.
 
-Run `experiments/train_rnn.py` to train a model. The script supports loading parameters from a YAML file via `--config`, filtering the subject via `--subject` (only one subject per run is allowed), and setting the chronological train-test split via `--train-split`.
+### B. Signal Reconstruction Strategy (Shortest Horizon / Freshest Prediction)
+When reconstructing the continuous validation signal across overlapping sliding windows:
+* **Why Average-Based Merging Flattened Signals**: Arithmetic averaging across multi-step overlapping predictions causes destructive phase cancellation in oscillatory signals, artificially flattening predictions toward zero.
+* **Shortest Horizon / Freshest Prediction Selection (Option 1)**: For every temporal point $t$ in the test series, the reconstruction pipeline selects the prediction generated by the **most recent input window** (i.e. the smallest prediction horizon $h = t - t_{\text{start}} + 1$), discarding older multi-step projections. This preserves authentic amplitude, phase, and peak dynamics without damping.
 
-#### Data Leakage Prevention (Overlap Gap Rejection)
-To prevent temporal data leakage caused by overlapping sliding windows, the script performs a chronological split *per file*. It calculates the overlapping transition gap:
-$$\text{neglected\_windows} = \lceil \frac{T_{in} + T_{out}}{\text{stride}} \rceil$$
-It trains on the first portion of windows, discards the transition windows, and validates on the remaining subsequent windows.
+### C. Advanced Fidelity Evaluation Metrics
+In addition to standard loss, the pipeline logs physiological signal metrics:
+* **Pearson Correlation ($r$)**: Measures point-to-point temporal correlation and phase alignment between ground truth and predicted signals:
+  $$r = \frac{\sum (y_t - \bar{y})(\hat{y}_t - \bar{\hat{y}})}{\sqrt{\sum (y_t - \bar{y})^2 \sum (\hat{y}_t - \bar{\hat{y}})^2}}$$
+* **Amplitude Tracking Ratio**: Evaluates variance preservation to ensure predictions do not collapse to zero:
+  $$\text{Ratio} = \frac{\sigma_{\text{pred}}}{\sigma_{\text{gt}}}$$
+* **Mean Absolute Error (MAE)** & **Mean Squared Error (MSE)** in both normalized units and original $\mu\text{V}$.
 
-#### Downsampling and Memory Optimization
-EEG signals typically have high sampling rates (e.g. 200 Hz). Training RNNs directly on raw signals for several minutes results in extremely long sequence lengths (e.g. 60,000 steps for a 5-minute input window), causing GPU memory (VRAM) exhaustion (OOM) or slow training.
-- **`--resample-freq`**: Downsamples the EEG signal to the specified frequency (in Hz) during loading. Setting this to a value like `20.0` or `10.0` Hz dramatically shortens sequence lengths, speeding up training by 10x-20x.
-- **`--force-cpu`**: Forces TensorFlow to run training on the system CPU instead of the GPU. This is recommended to avoid VRAM crashes on devices with limited GPU memory.
+### D. Training the RNN Forecaster
+Run `experiments/train_rnn.py` via CLI or YAML configuration:
 
 * **Training via YAML config**:
   ```bash
-  python3 experiments/train_rnn.py --config configs/model_training_rnn_predictor/seedvig_predict_example.yaml
+  python3 experiments/train_rnn.py --config configs/hyperparameter_search_rnn/forecast_grid_6_1step_100hz.yaml
   ```
 
-* **Training via CLI overrides**:
+* **Training via 1-Step CLI overrides with RMSProp**:
   ```bash
-  python3 experiments/train_rnn.py --dataset-type seed_vig --channel O1 --model-version v0 --subject 1 --epochs 15 --train-split 0.75 --resample-freq 20.0 --force-cpu
+  python3 experiments/train_rnn.py \
+      --dataset-type seed_vig \
+      --channel CP2 \
+      --model-version v0 \
+      --subject 1 \
+      --input-steps 100 \
+      --predict-steps 1 \
+      --stride-steps 1 \
+      --resample-freq 100.0 \
+      --optimizer-name rmsprop \
+      --learning-rate 0.001 \
+      --latent-dim 32 \
+      --batch-size 64 \
+      --epochs 10 \
+      --train-split 0.8 \
+      --output-plot outputs/test_1step_plot.png
   ```
 
-### B. Running Predictions (run_pipeline)
+### E. Running Predictions (run_pipeline)
 
 Run `experiments/run_pipeline.py` to load a signal, extract an input window, perform the RNN forecast, and save the outputs to the outputs folder.
-
-#### Automatic File Resolution
-You do not need to write absolute paths. If the specified `--file` does not exist directly, the script will automatically check inside the respective raw dataset directory (`SEED_VIG_DIR` for SEED-VIG, or `DROZY_DIR/psg` for DROZY).
 
 * **Running the pipeline**:
   ```bash
@@ -659,22 +698,16 @@ You do not need to write absolute paths. If the specified `--file` does not exis
   ```
 
 This command will output:
+1. **A reconstructed future signal** saved to a MATLAB `.mat` file (e.g. `outputs/predicted_10_20151125_noon_O1.mat`).
+2. **A dual-panel comparison plot** (Panorama + 60s Zoom) saved to `outputs/plot_10_20151125_noon_O1.png`.
 
-1. **A reconstructed future signal** saved to a MATLAB `.mat` file (e.g. `outputs/predicted_10_20151125_noon_O1.mat`). The MAT file contains a dictionary with the following keys:
-   * `predicted_signal`: 1D array of the predicted future signal amplitude.
-   * `sfreq`: Sampling frequency of the signal.
-   * `channel`: The predicted channel name.
-   * `start_min` / `end_min`: Input window boundaries in minutes.
-   * `predict_min`: Forecasted duration in minutes.
-2. **A comparison plot** comparing the input, predicted signal, and actual ground truth saved to `outputs/plot_10_20151125_noon_O1.png`.
-
-*Note: The default directory for these files is `outputs/` (configured dynamically via config.OUTPUT_DIR), but you can specify a custom output folder by passing the `--output-dir` argument (e.g. `--output-dir path/to/custom_folder/`).*
+---
 
 # RNN-MLP Sleepiness Classification Pipeline
 
 **Description**
 
-This module implements a Two-Stage coupled architecture where a Multi-Layer Perceptron (MLP) binary classifier is stacked directly on top of a frozen pre-trained RNN forecaster model. The coupled model classifies whether the subject is alert or drowsy based on the temporal signal windows.
+This module implements a Two-Stage coupled architecture where a Multi-Layer Perceptron (MLP) binary classifier is stacked directly on top of a frozen pre-trained RNN forecaster model. The coupled model classifies whether the subject is alert or drowsy based on temporal signal windows.
 
 Training is performed on standard-scaled inputs using Binary Crossentropy loss, and evaluated with **Accuracy** as the final metric.
 
@@ -747,11 +780,13 @@ To run the integration tests verifying the classification pipeline functionality
 python3 -m unittest tests/test_rnn_classification.py
 ```
 
+---
+
 # RNN Hyperparameter Grid Search
 
 **Description**
 
-This module provides wrappers (`run_rnn_gridsearch.py` and `run_rnn_classifier_gridsearch.py`) to perform grid search over hyperparameter configurations matching the format used in the CNN pipeline (`mode: fixed/choice/...` and `value: ...`).
+This module provides wrappers (`run_rnn_gridsearch.py` and `run_rnn_classifier_gridsearch.py`) to perform grid search over hyperparameter configurations matching the format used in the CNN pipeline (`mode: fixed/choice/...` and `values: ...`).
 
 Each candidate combination runs inside an isolated subprocess to prevent VRAM memory leaks or GPU out-of-memory errors in TensorFlow, communicating final validation metrics via a temporary JSON file.
 
@@ -761,34 +796,52 @@ Each candidate combination runs inside an isolated subprocess to prevent VRAM me
 
 Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
 
-* **RNN Forecasting Search** (e.g. `configs/hyperparameter_search_rnn/forecast_gridsearch_example.yaml`):
+* **1-Step 100 Hz RNN Forecasting Search** (e.g. `configs/hyperparameter_search_rnn/forecast_grid_6_1step_100hz.yaml`):
   ```yaml
   MODEL_HYPER_PARAMS:
+    model_version:
+      mode: "choice"
+      values: ["v0", "v1"]       # LSTM vs GRU
     latent_dim:
       mode: "choice"
-      values: [16, 32]
+      values: [16, 32, 64]
   MODEL_TRAIN_PARAMS:
+    optimizer_name:
+      mode: "choice"
+      values: ["adam", "rmsprop"]
     learning_rate:
       mode: "choice"
-      values: [0.01, 0.001]
+      values: [0.001, 0.0001]
     epochs:
-      mode: "fixed"
-      values: [5]
+      mode: "choice"
+      values: [10, 20]
     batch_size:
-      mode: "fixed"
-      values: [32]
+      mode: "choice"
+      values: [64, 128]
     dataset_type:
       mode: "fixed"
       values: ["seed_vig"]
     channel:
       mode: "fixed"
       values: ["CP2"]
+    subject:
+      mode: "fixed"
+      values: [1]
     resample_freq:
       mode: "fixed"
-      values: [20.0]
-    subject:
-      mode: "choice"
-      values: [1, 2, 3]
+      values: [100.0]
+    input_steps:
+      mode: "fixed"
+      values: [100]
+    predict_steps:
+      mode: "fixed"
+      values: [1]
+    stride_steps:
+      mode: "fixed"
+      values: [1]
+    train_split:
+      mode: "fixed"
+      values: [0.8]
   ```
 
 * **RNN Coupled Classification Search** (e.g. `configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml`):
@@ -818,66 +871,6 @@ Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
       values: ["outputs/models/rnn_predict_v0_seed_vig_CP2.h5"]
   ```
 
-* **DROZY Forecasting Search** (e.g. `configs/hyperparameter_search_rnn/drozy_forecast_gridsearch_example.yaml`):
-  ```yaml
-  MODEL_HYPER_PARAMS:
-    latent_dim:
-      mode: "choice"
-      values: [16, 32]
-  MODEL_TRAIN_PARAMS:
-    learning_rate:
-      mode: "choice"
-      values: [0.01, 0.001]
-    epochs:
-      mode: "fixed"
-      values: [5]
-    batch_size:
-      mode: "fixed"
-      values: [32]
-    dataset_type:
-      mode: "fixed"
-      values: ["drozy"]
-    channel:
-      mode: "fixed"
-      values: ["C3"]
-    resample_freq:
-      mode: "fixed"
-      values: [20.0]
-    subject:
-      mode: "choice"
-      values: [1, 2, 3]
-  ```
-
-* **DROZY Coupled Classification Search** (e.g. `configs/hyperparameter_search_rnn/drozy_classifier_gridsearch_example.yaml`):
-  ```yaml
-  MODEL_HYPER_PARAMS:
-    learning_rate:
-      mode: "choice"
-      values: [0.01, 0.001]
-  MODEL_TRAIN_PARAMS:
-    epochs:
-      mode: "fixed"
-      values: [5]
-    batch_size:
-      mode: "fixed"
-      values: [32]
-    dataset_type:
-      mode: "fixed"
-      values: ["drozy"]
-    channel:
-      mode: "fixed"
-      values: ["C3"]
-    resample_freq:
-      mode: "fixed"
-      values: [20.0]
-    rnn_model_path:
-      mode: "fixed"
-      values: ["outputs/models/rnn_predict_v0_drozy_C3.h5"]
-    drowsiness_threshold:
-      mode: "fixed"
-      values: [4]
-  ```
-
 ---
 
 ## 2. Executing Grid Search
@@ -885,8 +878,8 @@ Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
 * **RNN Forecasting Grid Search**:
   ```bash
   python3 experiments/run_rnn_gridsearch.py \
-      --output_folder rnn_forecast_search \
-      --params_file configs/hyperparameter_search_rnn/forecast_gridsearch_example.yaml \
+      --output_folder forecast_grid_6 \
+      --params_file configs/hyperparameter_search_rnn/forecast_grid_6_1step_100hz.yaml \
       --force-cpu
   ```
 
@@ -903,10 +896,11 @@ Parameter spaces are defined under `configs/hyperparameter_search_rnn/`:
 ## 3. Outputs and Logs
 
 The grid search script automatically saves all outputs and progress in the designated output folder (inside `outputs/`):
+* **`results.jsonl`**: The registry file documenting the mapping between each candidate's unique `hash_id`, its original `candidate_id`, its hyperparameters, validation metrics (MSE, MAE, Pearson Correlation, Amplitude Tracking Ratio), saved model weights, and comparison plots.
 * **`progress.json`**: Tracks the evaluation status (validation metrics or `FAILED`) of each candidate (allowing safe execution resume).
 * **`param_registry.json`**: Registry maps each candidate ID to its respective hyperparameter combination.
 * **`log.txt`**: Automatically captures all console logs, parent messages, and real-time outputs (including warnings, TensorFlow outputs, and Keras training progress) of the child subprocesses.
-* **Model Weights (`.h5` files)**: Keeps unique saved weights corresponding to each successful candidate.
+* **Model Weights (`.h5` files)** and **Comparison Plots (`.png` files)**: Saved weights and high-resolution dual-panel comparison plots named using the candidate's unique `hash_id` (e.g. `rnn_predict_model_a1b2c3d4e5.h5` and `rnn_predict_model_a1b2c3d4e5.png`).
 
 ---
 
