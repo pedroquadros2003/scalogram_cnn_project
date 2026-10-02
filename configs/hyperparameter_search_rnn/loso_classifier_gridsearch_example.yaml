@@ -1,69 +1,86 @@
 # ==============================================================================
-# Grid Search Configuration: Anticipatory RNN-MLP Classifier (TEMPORAL SPLIT)
-# Split Strategy: Intra-Session Chronological Split (train_split: 0.8 / 80% train, 20% val)
-# NOTE: This configuration performs TIME-BASED evaluation within the same subject(s).
-#       It is NOT Leave-One-Subject-Out (LOSO) cross-validation.
+# Comprehensive Grid Search Configuration: LOSO Anticipatory Classifier (Example)
+# Validation Strategy: Leave-One-Subject-Out (LOSO) Cross-Validation
+#
+# NOTE: In this search, each candidate hyperparameter combination undergoes
+#       a full LOSO cross-validation across all specified validation subjects.
 # ==============================================================================
 
 MODEL_HYPER_PARAMS:
-  # Hyperparameters for MLP classification head
   learning_rate:
     mode: "choice"
     values: [0.001, 0.0005]
+
   model_version:
     mode: "choice"
     values: ["v0", "v1"]
+
   hidden_units_1:
     mode: "choice"
     values: [64, 128]
+
   hidden_units_2:
     mode: "fixed"
     values: [32]
+
   dropout_1:
     mode: "fixed"
     values: [0.3]
+
   dropout_2:
     mode: "fixed"
     values: [0.2]
+
   optimizer_name:
     mode: "fixed"
     values: ["adam"]
 
 MODEL_TRAIN_PARAMS:
-  epochs:
-    mode: "fixed"
-    values: [10]
-  batch_size:
-    mode: "fixed"
-    values: [32]
-  dataset_type:
-    mode: "fixed"
-    values: ["seed_vig"]
-  channel:
-    mode: "fixed"
-    values: ["CP2"]
-  class_weight_mode:
-    mode: "fixed"
-    values: ["balanced"]
   lead_time_sec:
     mode: "choice"
-    values: [0.0, 10.0, 30.0]  # Anticipation lead times (present, 10s ahead, 30s ahead)
+    values: [0.0, 5.0, 30.0]
+
+  epochs:
+    mode: "fixed"
+    values: [15]
+
+  batch_size:
+    mode: "choice"
+    values: [32, 64]
+
+  class_weight_mode:
+    mode: "fixed"
+    values: ["none"]
+
+  fine_tune_rnn:
+    mode: "fixed"
+    values: [false]
+
   stride_sec:
     mode: "fixed"
     values: [5.0]
-  train_split:
+
+  dataset_type:
     mode: "fixed"
-    values: [0.8]
+    values: ["seed_vig"]
+
+  channel:
+    mode: "fixed"
+    values: ["CP2"]
+
   resample_freq:
     mode: "fixed"
-    values: [100.0]  # 100 Hz matching the pre-trained forecaster
-  subjects:
-    mode: "fixed"
-    values:
-      - [1]
+    values: [100.0]
+
   drowsiness_threshold:
     mode: "fixed"
     values: [0.5]
+
   rnn_model_path:
     mode: "fixed"
     values: ["outputs/models/best_rnn_predictor_seedvig_CP2.h5"]
+
+  subjects:
+    mode: "fixed"
+    values:
+      - [1, 2, 3]

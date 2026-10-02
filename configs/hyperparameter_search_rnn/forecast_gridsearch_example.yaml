@@ -1,4 +1,9 @@
-# Configuration space for RNN signal forecasting grid search
+# ==============================================================================
+# Grid Search Configuration: RNN Signal Forecasting (TEMPORAL SPLIT)
+# Split Strategy: Intra-Session Chronological Split (train_split: 0.8 / 80% train, 20% val)
+# NOTE: This configuration performs TIME-BASED forecasting evaluation.
+# ==============================================================================
+
 MODEL_HYPER_PARAMS:
   latent_dim:
     mode: "choice"

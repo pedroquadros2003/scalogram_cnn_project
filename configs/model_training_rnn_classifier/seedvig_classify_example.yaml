@@ -1,28 +1,27 @@
-# Dataset type: "seed_vig" or "drozy"
+# Dataset configuration
 dataset_type: "seed_vig"
-
-# Channel name to train on
 channel: "CP2"
-
-# Subject IDs to filter files for training (omit or set to null to process all files)
 subjects: [1, 2, 3]
 
 # Signal window configurations
-input_min: 5.0      # Input window duration in minutes
-predict_min: 2.0    # Output prediction/forecasting duration in minutes
-stride_sec: 30.0    # Window sliding stride in seconds
+# Input window is automatically inferred from forecaster model (1.0s / 100 samples)
+lead_time_sec: 30.0    # Anticipatory early warning target at t + 30.0s
+stride_sec: 5.0        # Window sliding stride in seconds
+resample_freq: 100.0   # Frequency matching pre-trained forecaster (100 Hz)
 
-# Frequency resampling
-resample_freq: 60.0
-
-# Pre-trained RNN model path to couple with the MLP
-rnn_model_path: "outputs/models/rnn_predict_v0_seed_vig_CP2.h5"
+# Pre-trained RNN forecaster model path
+rnn_model_path: "outputs/models/best_rnn_predictor_seedvig_CP2.h5"
 
 # MLP Training hyperparameters
-epochs: 10
-batch_size: 16
+model_version: "v0"
+epochs: 15
+batch_size: 32
 learning_rate: 0.001
 train_split: 0.8
+drowsiness_threshold: 0.5
 
-# Path to save the trained coupled model (omit or set to null to use default outputs/models/ path)
+# Class weighting mode ("balanced", "none", or custom drowsy_weight)
+class_weight_mode: "balanced"
+
+# Output coupled model path
 output_model: null

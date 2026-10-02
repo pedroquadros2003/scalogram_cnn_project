@@ -1,0 +1,115 @@
+# ==============================================================================
+# Comprehensive Grid Search Configuration: LOSO Anticipatory Classifier
+# Dataset: SEED-VIG (CP2 Channel)
+# Validation Strategy: Leave-One-Subject-Out (LOSO) Cross-Validation
+#
+# NOTE: Unlike temporal split grid searches, EACH candidate in this grid search
+#       is evaluated across ALL designated LOSO folds (e.g. 5 subjects or all 23).
+#       Candidates are ranked by Global Mean Validation Accuracy (mu ± sigma)
+#       and Global Mean Validation Loss across the left-out subjects.
+# ==============================================================================
+
+MODEL_HYPER_PARAMS:
+  # Classification head learning rate
+  learning_rate:
+    mode: "choice"
+    values: [0.001, 0.0005]
+
+  # Classification head architecture version:
+  #   - v0: Standard MLP (Dense -> Dropout -> Dense -> Dropout -> Sigmoid)
+  #   - v1: Batch-Normalized High-Capacity MLP (BN -> Dense -> Dropout -> Dense -> Dropout -> Sigmoid)
+  model_version:
+    mode: "choice"
+    values: ["v0", "v1"]
+
+  # First hidden dense layer capacity
+  hidden_units_1:
+    mode: "choice"
+    values: [64, 128]
+
+  # Second hidden dense layer capacity
+  hidden_units_2:
+    mode: "fixed"
+    values: [32]
+
+  # Dropout regularization rates
+  dropout_1:
+    mode: "choice"
+    values: [0.3, 0.4]
+
+  dropout_2:
+    mode: "fixed"
+    values: [0.2]
+
+  # Optimizer
+  optimizer_name:
+    mode: "fixed"
+    values: ["adam"]
+
+MODEL_TRAIN_PARAMS:
+  # Anticipation lead horizon X in seconds (target label at t + lead_time_sec):
+  #   - 0.0: Instantaneous state detection (t)
+  #   - 5.0: Short-horizon early warning (t + 5s)
+  #   - 30.0: Long-horizon anticipatory forecasting (t + 30s)
+  lead_time_sec:
+    mode: "choice"
+    values: [0.0, 5.0, 30.0]
+
+  # Training epochs per fold
+  epochs:
+    mode: "fixed"
+    values: [15]
+
+  # Mini-batch size
+  batch_size:
+    mode: "choice"
+    values: [32, 64]
+
+  # Loss weighting mode: "none" (standard BCE) or "balanced" (inverse class frequency weights)
+  class_weight_mode:
+    mode: "fixed"
+    values: ["none"]
+
+  # Unfreeze recurrent forecaster backbone weights for end-to-end gradient fine-tuning:
+  #   - false: Frozen backbone (feature extractor mode)
+  #   - true:  End-to-end fine-tuning of RNN recurrent weights alongside MLP head
+  fine_tune_rnn:
+    mode: "choice"
+    values: [false, true]
+
+  # Sliding window stride in seconds
+  stride_sec:
+    mode: "fixed"
+    values: [5.0]
+
+  # Target dataset
+  dataset_type:
+    mode: "fixed"
+    values: ["seed_vig"]
+
+  # Target EEG channel
+  channel:
+    mode: "fixed"
+    values: ["CP2"]
+
+  # Sampling rate matching pre-trained RNN forecaster
+  resample_freq:
+    mode: "fixed"
+    values: [100.0]
+
+  # Drowsiness binarization threshold for PERCLOS (round(perclos) >= 0.5)
+  drowsiness_threshold:
+    mode: "fixed"
+    values: [0.5]
+
+  # Pretrained forecaster model path
+  rnn_model_path:
+    mode: "fixed"
+    values: ["outputs/models/best_rnn_predictor_seedvig_CP2.h5"]
+
+  # Subjects to evaluate in LOSO cross-validation for each candidate:
+  # Set to a subset (e.g. [1, 2, 3, 4, 5]) for faster search, or omit/set null for all 23 subjects
+  subjects:
+    mode: "fixed"
+    values:
+      - [1, 2, 3, 4, 5]

@@ -1,45 +1,50 @@
-# Configuration space for DROZY classifier grid search
+# ==============================================================================
+# Grid Search Configuration: DROZY Anticipatory Classifier (TEMPORAL SPLIT)
+# Split Strategy: Intra-Session Chronological Split (train_split: 0.8 / 80% train, 20% val)
+# NOTE: This configuration performs TIME-BASED evaluation within the same subject(s).
+#       It is NOT Leave-One-Subject-Out (LOSO) cross-validation.
+# ==============================================================================
+
 MODEL_HYPER_PARAMS:
-  # Hyperparameters for MLP training
   learning_rate:
     mode: "choice"
-    values: [0.01, 0.001]
+    values: [0.001, 0.0005]
 
 MODEL_TRAIN_PARAMS:
   epochs:
     mode: "fixed"
-    values: [5]
+    values: [10]
   batch_size:
     mode: "fixed"
-    values: [16]
+    values: [32]
   dataset_type:
     mode: "fixed"
     values: ["drozy"]
   channel:
     mode: "fixed"
     values: ["C3"]
-  input_min:
-    mode: "fixed"
-    values: [5.0]
-  predict_min:
-    mode: "fixed"
-    values: [2.0]
+  model_version:
+    mode: "choice"
+    values: ["v0", "v1"]
+  lead_time_sec:
+    mode: "choice"
+    values: [0.0, 10.0, 30.0]  # Anticipation lead times (present, 10s ahead, 30s ahead)
   stride_sec:
     mode: "fixed"
-    values: [30.0]
+    values: [5.0]
   train_split:
     mode: "fixed"
     values: [0.8]
   resample_freq:
     mode: "fixed"
-    values: [60.0]  # Downsample signals to match the pre-trained RNN forecaster sampling rate
+    values: [100.0]  # Standard 100 Hz sampling rate
   subjects:
     mode: "fixed"
     values:
       - [1, 2, 3]
+  drowsiness_threshold:
+    mode: "fixed"
+    values: [4.0]  # KSS >= 4 indicates moderate to severe drowsiness
   rnn_model_path:
     mode: "fixed"
     values: ["outputs/models/rnn_predict_v0_drozy_C3.h5"]
-  drowsiness_threshold:
-    mode: "fixed"
-    values: [4]

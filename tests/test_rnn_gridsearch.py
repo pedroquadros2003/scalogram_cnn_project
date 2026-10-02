@@ -27,7 +27,7 @@ class TestRNNGridSearch(unittest.TestCase):
         # Create mock SEED-VIG signal file
         self.sfreq = 100.0
         self.num_channels = 3
-        self.num_samples = 6000  # 60 seconds
+        self.num_samples = 15000  # 150 seconds
         self.channels = ["C3", "C4", "CP2"]
         
         self.mock_data = np.random.randn(self.num_samples, self.num_channels).astype(np.float32)

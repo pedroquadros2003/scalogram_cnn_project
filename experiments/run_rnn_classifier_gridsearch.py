@@ -17,9 +17,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Grid Search for Coupled RNN-MLP Classifier")
+    parser = argparse.ArgumentParser(
+        description="Run Hyperparameter Grid Search for Coupled RNN-MLP Classifier (Temporal Chronological Split / Intra-Session)"
+    )
     parser.add_argument("--output_folder", type=str, default="rnn_classifier_gridsearch", help="Output folder name inside OUTPUT_DIR")
-    parser.add_argument("--params_file", type=str, default="configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml", help="YAML search space configuration file path")
+    parser.add_argument("--params_file", type=str, default="configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml", help="YAML search space configuration file path (Temporal Split)")
+    parser.add_argument("--save-plot", action=argparse.BooleanOptionalAction, default=True, help="Whether to generate and save training/validation comparison plots")
     parser.add_argument("--force-cpu", action="store_true", help="Force candidate executions to run on CPU")
     
     args = parser.parse_args()
@@ -102,17 +105,21 @@ def main():
         with open(temp_config_path, "w") as f:
             yaml.dump(params, f, default_flow_style=False)
             
-        # Target metrics JSON file
+        # Target metrics JSON file and plot file
         metrics_json_path = output_dir / f"metrics_{hash_id}.json"
+        plot_path = output_dir / f"classifier_history_{hash_id}.png"
         
         # Subprocess command
         cmd = [
             sys.executable, "experiments/train_rnn_classifier.py",
             "--config", str(temp_config_path),
             "--metrics-json-path", str(metrics_json_path),
-            # Save weights uniquely per candidate
-            "--output-model", str(output_dir / f"combined_predict_classifier_{hash_id}.h5")
+            # Save weights and comparative history plot uniquely per candidate
+            "--output-model", str(output_dir / f"combined_predict_classifier_{hash_id}.h5"),
+            "--output-plot", str(plot_path)
         ]
+        if not args.save_plot:
+            cmd.append("--no-save-plot")
         if args.force_cpu:
             cmd.append("--force-cpu")
             
@@ -144,7 +151,7 @@ def main():
             if return_code == 0 and metrics_json_path.exists():
                 with open(metrics_json_path, "r") as f:
                     metrics = json.load(f)
-                val_acc = metrics.get("val_accuracy", -1.0)
+                val_acc = metrics.get("val_accuracy", metrics.get("accuracy", -1.0))
                 results[cand_id] = metrics
                 logger.info(f"Candidate {cand_id} ({hash_id}) completed. Metrics: {metrics}")
                 
@@ -154,7 +161,8 @@ def main():
                     "candidate_id": cand_id,
                     "parameters": params,
                     "metrics": metrics,
-                    "model_path": f"combined_predict_classifier_{hash_id}.h5"
+                    "model_path": f"combined_predict_classifier_{hash_id}.h5",
+                    "plot_path": f"classifier_history_{hash_id}.png" if plot_path.exists() else None
                 }
                 jsonl_file_path = output_dir / "results.jsonl"
                 with open(jsonl_file_path, "a") as jsonl_file:

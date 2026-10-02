@@ -1,0 +1,27 @@
+# ==============================================================================
+# SEED-VIG Leave-One-Subject-Out (LOSO) Classifier Configuration
+# Architecture: v1 (Batch-Normalized High-Capacity MLP Head)
+# ==============================================================================
+
+dataset_type: "seed_vig"
+channel: "CP2"
+model_version: "v1"
+rnn_model_path: "outputs/models/best_rnn_predictor_seedvig_CP2.h5"
+
+lead_time_sec: 30.0
+stride_sec: 5.0
+resample_freq: 100.0
+
+epochs: 15
+batch_size: 64
+learning_rate: 0.0005
+optimizer_name: "adam"
+hidden_units_1: 128
+hidden_units_2: 32
+dropout_1: 0.4
+dropout_2: 0.2
+
+class_weight_mode: "none"
+drowsiness_threshold: 0.5
+fine_tune_rnn: false
+save_plot: true

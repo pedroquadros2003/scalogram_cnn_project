@@ -17,10 +17,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Grid Search for RNN Signal Forecasting")
+    parser = argparse.ArgumentParser(
+        description="Run Hyperparameter Grid Search for RNN Signal Forecasting (Temporal Chronological Split / Intra-Session)"
+    )
     parser.add_argument("--output_folder", type=str, default="rnn_forecast_gridsearch", help="Output folder name inside OUTPUT_DIR")
-    parser.add_argument("--params_file", type=str, default="configs/hyperparameter_search_rnn/forecast_gridsearch_example.yaml", help="YAML search space configuration file path")
+    parser.add_argument("--params_file", type=str, default="configs/hyperparameter_search_rnn/forecast_gridsearch_example.yaml", help="YAML search space configuration file path (Temporal Split)")
     parser.add_argument("--force-cpu", action="store_true", help="Force candidate executions to run on CPU")
+    parser.add_argument("--save-plot", action=argparse.BooleanOptionalAction, default=True, help="Whether to generate and save comparison plots for each candidate")
     
     args = parser.parse_args()
     
@@ -113,6 +116,11 @@ def main():
             # Save weights uniquely per candidate
             "--output-model", str(output_dir / f"rnn_predict_{hash_id}.h5")
         ]
+        
+        is_plotting_enabled = args.save_plot and params.get("save_plot") is not False and params.get("output_plot") not in ["none", False]
+        if not is_plotting_enabled:
+            cmd.append("--no-save-plot")
+            
         if args.force_cpu:
             cmd.append("--force-cpu")
             
@@ -155,7 +163,7 @@ def main():
                     "parameters": params,
                     "metrics": metrics,
                     "model_path": f"rnn_predict_{hash_id}.h5",
-                    "plot_path": f"rnn_predict_{hash_id}.png"
+                    "plot_path": f"rnn_predict_{hash_id}.png" if is_plotting_enabled else None
                 }
                 jsonl_file_path = output_dir / "results.jsonl"
                 with open(jsonl_file_path, "a") as jsonl_file:

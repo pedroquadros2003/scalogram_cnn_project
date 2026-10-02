@@ -117,6 +117,7 @@ def main():
     parser.add_argument("--max-train-samples", type=int, default=None, help="Optional maximum number of training samples to use")
     parser.add_argument("--force-cpu", action="store_true", help="Force training to run on CPU to avoid GPU VRAM OOM crashes")
     parser.add_argument("--metrics-json-path", type=str, default=None, help="Path to save final training and validation metrics as JSON")
+    parser.add_argument("--save-plot", action=argparse.BooleanOptionalAction, default=True, help="Whether to generate and save prediction comparison plots")
     
     args = parser.parse_args()
     
@@ -427,20 +428,23 @@ def main():
                 sub_pred[update_mask] = pred_window[update_mask]
                 sub_best[update_mask] = horizons[update_mask]
                 
-            # If any gap/uncovered points remain NaN, fill with 0.0
-            if np.isnan(pred_signal_norm).any():
-                pred_signal_norm[np.isnan(pred_signal_norm)] = 0.0
-            
-            # Compute detailed evaluation metrics
-            val_mse = float(np.mean((pred_signal_norm - gt_signal_norm) ** 2))
-            val_mae = float(np.mean(np.abs(pred_signal_norm - gt_signal_norm)))
-            gt_std_norm = float(np.std(gt_signal_norm))
-            pred_std_norm = float(np.std(pred_signal_norm))
-            val_amp_ratio = float(pred_std_norm / max(gt_std_norm, 1e-6))
-            if gt_std_norm > 1e-6 and pred_std_norm > 1e-6:
-                val_pearson_corr = float(np.corrcoef(gt_signal_norm, pred_signal_norm)[0, 1])
+            # Compute detailed evaluation metrics strictly on valid predicted points (avoiding zero-fill stride distortion)
+            valid_mask = ~np.isnan(pred_signal_norm)
+            if valid_mask.any():
+                val_mse = float(np.mean((pred_signal_norm[valid_mask] - gt_signal_norm[valid_mask]) ** 2))
+                val_mae = float(np.mean(np.abs(pred_signal_norm[valid_mask] - gt_signal_norm[valid_mask])))
+                gt_std_norm = float(np.std(gt_signal_norm[valid_mask]))
+                pred_std_norm = float(np.std(pred_signal_norm[valid_mask]))
+                val_amp_ratio = float(pred_std_norm / max(gt_std_norm, 1e-6))
+                if gt_std_norm > 1e-6 and pred_std_norm > 1e-6:
+                    val_pearson_corr = float(np.corrcoef(gt_signal_norm[valid_mask], pred_signal_norm[valid_mask])[0, 1])
+                else:
+                    val_pearson_corr = 0.0
             else:
+                val_mse = 0.0
+                val_mae = 0.0
                 val_pearson_corr = 0.0
+                val_amp_ratio = 0.0
                 
             logger.info("==========================================")
             logger.info(f"📊 Validation Reconstruction Metrics (File {sig_idx}):")
@@ -455,74 +459,89 @@ def main():
             extra_metrics["val_pearson_corr"] = val_pearson_corr
             extra_metrics["val_amp_ratio"] = val_amp_ratio
             
+            # For visualization, smoothly interpolate between stride samples (avoiding drop to 0.0)
+            if np.isnan(pred_signal_norm).any():
+                valid_idx = np.where(valid_mask)[0]
+                if len(valid_idx) > 1:
+                    all_idx = np.arange(len(pred_signal_norm))
+                    pred_signal_plot_norm = np.interp(all_idx, valid_idx, pred_signal_norm[valid_idx])
+                else:
+                    pred_signal_plot_norm = np.nan_to_num(pred_signal_norm, nan=0.0)
+            else:
+                pred_signal_plot_norm = pred_signal_norm.copy()
+            
             # Denormalize
             mean = loaded_means[sig_idx]
             std = loaded_stds[sig_idx]
             gt_signal = gt_signal_norm * std + mean
-            pred_signal = pred_signal_norm * std + mean
+            pred_signal = pred_signal_plot_norm * std + mean
             
             # Matplotlib Plotting (Ultra-wide high-resolution visualization)
-            try:
-                import matplotlib
-                matplotlib.use("Agg")
-                import matplotlib.pyplot as plt
-                
-                # Create a massive, ultra-high resolution horizontal plot (72 inches wide, 300 DPI -> ~21,600 pixels)
-                fig, (ax_full, ax_zoom) = plt.subplots(2, 1, figsize=(72, 12), gridspec_kw={'height_ratios': [1.2, 1.0]})
-                time_axis_min = np.arange(test_start_sample, test_end_sample) / (sfreq * 60.0)  # Time in minutes
-                time_axis_sec = np.arange(test_start_sample, test_end_sample) / sfreq          # Time in seconds
-                
-                # Panel 1: Full Test Split Overview (Ultra-wide panorama)
-                ax_full.plot(time_axis_min, gt_signal, label="Original Signal (Ground Truth)", color="#1f77b4", alpha=0.75, linewidth=0.8)
-                ax_full.plot(time_axis_min, pred_signal, label="Predicted Signal (RNN)", color="#d62728", alpha=0.9, linewidth=1.0)
-                ax_full.set_title(
-                    f"Full Test Split Overview - Subject {args.subject or 'default'} (Channel {args.channel}) | "
-                    f"Pearson r: {val_pearson_corr:.4f} | Amp Ratio: {val_amp_ratio*100:.1f}% | MSE: {val_mse:.4f} | Opt: {args.optimizer_name}",
-                    fontsize=15, fontweight='bold'
-                )
-                ax_full.set_xlabel("Time (minutes)", fontsize=13)
-                ax_full.set_ylabel("Amplitude (μV)", fontsize=13)
-                ax_full.legend(loc="upper right", framealpha=0.9, fontsize=12)
-                ax_full.grid(True, which='major', color='#cccccc', linestyle='-', linewidth=0.7)
-                ax_full.grid(True, which='minor', color='#ebebeb', linestyle=':', linewidth=0.5)
-                ax_full.minorticks_on()
-                
-                # Panel 2: Detailed High-Resolution Waveform Zoom (First 60 seconds or first 500 samples)
-                zoom_samples = min(int(60.0 * sfreq), len(gt_signal))
-                if zoom_samples > 0:
-                    zoom_time = time_axis_sec[:zoom_samples] - time_axis_sec[0] # Relative seconds
-                    ax_zoom.plot(zoom_time, gt_signal[:zoom_samples], label="Original Signal (Zoom)", color="#1f77b4", alpha=0.8, linewidth=1.2)
-                    ax_zoom.plot(zoom_time, pred_signal[:zoom_samples], label="Predicted Signal (Zoom)", color="#d62728", alpha=0.95, linewidth=1.4)
-                    ax_zoom.set_title(
-                        f"Detailed Waveform Zoom View (First {zoom_samples/sfreq:.1f}s of Test Split)",
+            should_plot = args.save_plot and (args.output_plot is None or (isinstance(args.output_plot, str) and args.output_plot.lower() not in ["none", "false"]) or args.output_plot is True)
+            if should_plot:
+                try:
+                    import matplotlib
+                    matplotlib.use("Agg")
+                    import matplotlib.pyplot as plt
+                    
+                    # Create a massive, ultra-high resolution horizontal plot (72 inches wide, 300 DPI -> ~21,600 pixels)
+                    fig, (ax_full, ax_zoom) = plt.subplots(2, 1, figsize=(72, 12), gridspec_kw={'height_ratios': [1.2, 1.0]})
+                    time_axis_min = np.arange(test_start_sample, test_end_sample) / (sfreq * 60.0)  # Time in minutes
+                    time_axis_sec = np.arange(test_start_sample, test_end_sample) / sfreq          # Time in seconds
+                    
+                    # Panel 1: Full Test Split Overview (Ultra-wide panorama)
+                    ax_full.plot(time_axis_min, gt_signal, label="Original Signal (Ground Truth)", color="#1f77b4", alpha=0.75, linewidth=0.8)
+                    ax_full.plot(time_axis_min, pred_signal, label="Predicted Signal (RNN)", color="#d62728", alpha=0.9, linewidth=1.0)
+                    ax_full.set_title(
+                        f"Full Test Split Overview - Subject {args.subject or 'default'} (Channel {args.channel}) | "
+                        f"Pearson r: {val_pearson_corr:.4f} | Amp Ratio: {val_amp_ratio*100:.1f}% | MSE: {val_mse:.4f} | Opt: {args.optimizer_name}",
                         fontsize=15, fontweight='bold'
                     )
-                    ax_zoom.set_xlabel("Time (seconds)", fontsize=13)
-                    ax_zoom.set_ylabel("Amplitude (μV)", fontsize=13)
-                    ax_zoom.legend(loc="upper right", framealpha=0.9, fontsize=12)
-                    ax_zoom.grid(True, which='major', color='#cccccc', linestyle='-', linewidth=0.7)
-                    ax_zoom.grid(True, which='minor', color='#ebebeb', linestyle=':', linewidth=0.5)
-                    ax_zoom.minorticks_on()
-                
-                plt.tight_layout()
-                
-                # Determine output plot filename
-                if args.output_plot:
-                    plot_path = Path(args.output_plot)
-                else:
-                    plot_path = out_path.with_suffix(".png")
+                    ax_full.set_xlabel("Time (minutes)", fontsize=13)
+                    ax_full.set_ylabel("Amplitude (μV)", fontsize=13)
+                    ax_full.legend(loc="upper right", framealpha=0.9, fontsize=12)
+                    ax_full.grid(True, which='major', color='#cccccc', linestyle='-', linewidth=0.7)
+                    ax_full.grid(True, which='minor', color='#ebebeb', linestyle=':', linewidth=0.5)
+                    ax_full.minorticks_on()
                     
-                if len(val_by_sig) > 1:
-                    plot_file = plot_path.parent / f"{plot_path.stem}_file{sig_idx}.png"
-                else:
-                    plot_file = plot_path
+                    # Panel 2: Detailed High-Resolution Waveform Zoom (First 60 seconds or first 500 samples)
+                    zoom_samples = min(int(60.0 * sfreq), len(gt_signal))
+                    if zoom_samples > 0:
+                        zoom_time = time_axis_sec[:zoom_samples] - time_axis_sec[0] # Relative seconds
+                        ax_zoom.plot(zoom_time, gt_signal[:zoom_samples], label="Original Signal (Zoom)", color="#1f77b4", alpha=0.8, linewidth=1.2)
+                        ax_zoom.plot(zoom_time, pred_signal[:zoom_samples], label="Predicted Signal (Zoom)", color="#d62728", alpha=0.95, linewidth=1.4)
+                        ax_zoom.set_title(
+                            f"Detailed Waveform Zoom View (First {zoom_samples/sfreq:.1f}s of Test Split)",
+                            fontsize=15, fontweight='bold'
+                        )
+                        ax_zoom.set_xlabel("Time (seconds)", fontsize=13)
+                        ax_zoom.set_ylabel("Amplitude (μV)", fontsize=13)
+                        ax_zoom.legend(loc="upper right", framealpha=0.9, fontsize=12)
+                        ax_zoom.grid(True, which='major', color='#cccccc', linestyle='-', linewidth=0.7)
+                        ax_zoom.grid(True, which='minor', color='#ebebeb', linestyle=':', linewidth=0.5)
+                        ax_zoom.minorticks_on()
                     
-                plot_file.parent.mkdir(parents=True, exist_ok=True)
-                plt.savefig(str(plot_file), dpi=300, bbox_inches="tight")
-                plt.close(fig)
-                logger.info(f"Saved ultra-wide high-resolution prediction comparison plot to {plot_file}")
-            except Exception as plot_err:
-                logger.error(f"Failed to generate prediction comparison plot: {plot_err}")
+                    plt.tight_layout()
+                    
+                    # Determine output plot filename
+                    if args.output_plot and isinstance(args.output_plot, str) and args.output_plot.lower() not in ["none", "false"]:
+                        plot_path = Path(args.output_plot)
+                    else:
+                        plot_path = out_path.with_suffix(".png")
+                        
+                    if len(val_by_sig) > 1:
+                        plot_file = plot_path.parent / f"{plot_path.stem}_file{sig_idx}.png"
+                    else:
+                        plot_file = plot_path
+                        
+                    plot_file.parent.mkdir(parents=True, exist_ok=True)
+                    plt.savefig(str(plot_file), dpi=300, bbox_inches="tight")
+                    plt.close(fig)
+                    logger.info(f"Saved ultra-wide high-resolution prediction comparison plot to {plot_file}")
+                except Exception as plot_err:
+                    logger.error(f"Failed to generate prediction comparison plot: {plot_err}")
+            else:
+                logger.info("Plot generation is disabled (--no-save-plot / save_plot: false). Skipping plot rendering.")
     else:
         logger.warning("No validation data available. Skipping comparison plot.")
     

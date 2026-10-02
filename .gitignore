@@ -53,6 +53,8 @@ configs/hyperparameter_search_rnn/*
 !configs/hyperparameter_search_rnn/classifier_gridsearch_example.yaml
 !configs/hyperparameter_search_rnn/drozy_forecast_gridsearch_example.yaml
 !configs/hyperparameter_search_rnn/drozy_classifier_gridsearch_example.yaml
+!configs/hyperparameter_search_rnn/loso_classifier_gridsearch_example.yaml
+!configs/hyperparameter_search_rnn/seedvig_loso_classifier_grid_example.yaml
 
 # Ignore custom scalogram generator yaml configurations created by users
 # Keep only the baseline example configs for DROZY and SEED-VIG
@@ -69,6 +71,12 @@ configs/model_training_rnn_classifier/*
 !configs/model_training_rnn_classifier/drozy_classify_example.yaml
 configs/model_training_rnn_predictor/*
 !configs/model_training_rnn_predictor/seedvig_predict_example.yaml
+
+# Ignore custom LOSO classifier parameters yaml configurations created by users
+# Keep baseline example configs
+configs/loso_rnn_classifier/*
+!configs/loso_rnn_classifier/seedvig_loso_v0_cp2.yaml
+!configs/loso_rnn_classifier/seedvig_loso_v1_cp2.yaml
 
 # ==============================================================================
 # Miscellaneous and Internal Utilities
