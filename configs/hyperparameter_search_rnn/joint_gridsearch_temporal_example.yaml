@@ -1,0 +1,86 @@
+# ==============================================================================
+# Joint Multi-Task Grid Search Configuration: Signal Forecasting + Classification
+# Validation Strategy: Temporal Split (Intra-Session / Chronological Split)
+# ==============================================================================
+
+MODEL_HYPER_PARAMS:
+  predict_version:
+    mode: "choice"
+    values: ["v0", "v1"]              # LSTM (v0) vs GRU (v1)
+
+  classifier_version:
+    mode: "choice"
+    values: ["v0", "v1"]              # Standard MLP (v0) vs Batch-Normalized MLP (v1)
+
+  loss_alpha:
+    mode: "choice"
+    values: [0.2, 0.5, 0.8]           # Trade-off balance: 20%, 50%, 80% classification weight
+
+  latent_dim:
+    mode: "choice"
+    values: [32, 64]                  # Shared recurrent latent units
+
+  learning_rate:
+    mode: "choice"
+    values: [0.001, 0.0005]
+
+  hidden_units_1:
+    mode: "fixed"
+    values: [64]
+
+  hidden_units_2:
+    mode: "fixed"
+    values: [32]
+
+  dropout_1:
+    mode: "fixed"
+    values: [0.3]
+
+  dropout_2:
+    mode: "fixed"
+    values: [0.2]
+
+  optimizer_name:
+    mode: "fixed"
+    values: ["adam"]
+
+MODEL_TRAIN_PARAMS:
+  dataset_type:
+    mode: "fixed"
+    values: ["seed_vig"]
+
+  channel:
+    mode: "fixed"
+    values: ["CP2"]
+
+  lead_time_sec:
+    mode: "fixed"
+    values: [0.0]                     # Immediate state classification
+
+  forecast_steps:
+    mode: "fixed"
+    values: [1]                       # 1-step ahead forecasting (10 ms at 100 Hz)
+
+  input_sec:
+    mode: "fixed"
+    values: [1.0]                     # 1.0s window = 100 samples at 100 Hz
+
+  stride_sec:
+    mode: "fixed"
+    values: [5.0]
+
+  epochs:
+    mode: "fixed"
+    values: [15]
+
+  batch_size:
+    mode: "fixed"
+    values: [32]
+
+  train_ratio:
+    mode: "fixed"
+    values: [0.8]                     # 80% train, 20% validation
+
+  drowsiness_threshold:
+    mode: "fixed"
+    values: [0.5]

@@ -118,7 +118,9 @@ def main():
     parser.add_argument("--dataset-type", type=str, choices=["seed_vig", "drozy"], help="Type of dataset (seed_vig or drozy)")
     parser.add_argument("--channel", type=str, help="Channel name to train on (e.g. CP2, C3, Oz)")
     parser.add_argument("--model-version", type=str, default="v0", help="Architecture version for classifier (e.g. v0, v1)")
-    parser.add_argument("--rnn-model-path", type=str, default="outputs/models/best_rnn_predictor_seedvig_CP2.h5", help="Path to the pretrained RNN forecaster model (.h5)")
+    parser.add_argument("--rnn-model-path", type=str, default="outputs/models/best_rnn_predictor_seedvig_CP2.h5", help="Path to the pretrained RNN forecaster model (.h5) or null/none/random to train from scratch")
+    parser.add_argument("--latent-dim", type=int, default=32, help="Number of latent recurrent units when training from scratch")
+    parser.add_argument("--rnn-type", type=str, default="lstm", choices=["lstm", "gru"], help="Recurrent backbone architecture when training from scratch (lstm or gru)")
     parser.add_argument("--lead-time-sec", type=float, default=0.0, help="Anticipation lead time X in seconds (target state at t + lead_time_sec)")
     parser.add_argument("--input-sec", type=float, default=None, help="Input signal window duration in seconds (if None, inferred from forecaster)")
     parser.add_argument("--input-min", type=float, default=None, help="[Deprecated] Input duration in minutes (converted to input-sec if provided)")
@@ -218,10 +220,14 @@ def main():
         parser.error("--dataset-type is required (either via CLI or YAML config)")
     if not args.channel:
         parser.error("--channel is required (either via CLI or YAML config)")
-    if not args.rnn_model_path:
-        parser.error("--rnn-model-path is required (either via CLI or YAML config)")
     if not (0.0 <= args.train_split <= 1.0):
         parser.error("--train-split must be between 0.0 and 1.0")
+
+    # Check if we should initialize RNN backbone from scratch with random weights
+    is_from_scratch = (
+        args.rnn_model_path is None or
+        str(args.rnn_model_path).strip().lower() in ["none", "null", "random", "scratch", ""]
+    )
         
     # Handle backward compatibility for input_min and predict_min
     if args.input_min is not None and args.input_sec is None:
@@ -239,34 +245,44 @@ def main():
     if args.force_cpu:
         logger.info("Forcing CPU execution (disabling GPU devices)...")
         tf.config.set_visible_devices([], 'GPU')
-        
-    resolved_model_path = resolve_model_path(args.rnn_model_path)
-    if not resolved_model_path or not resolved_model_path.exists():
-        raise FileNotFoundError(f"Pretrained forecaster model not found at path: {args.rnn_model_path} (Resolved: {resolved_model_path})")
-        
-    logger.info(f"Loading pretrained RNN forecaster from {resolved_model_path}...")
-    rnn_model = tf.keras.models.load_model(str(resolved_model_path), compile=False)
-    
-    # Inquire expected input shape from the forecaster
-    model_expected_input_steps = rnn_model.input_shape[1] if hasattr(rnn_model, 'input_shape') and rnn_model.input_shape else None
-    
-    if args.input_sec is None:
-        if model_expected_input_steps is not None:
-            input_len = model_expected_input_steps
-            args.input_sec = input_len / args.resample_freq
-            logger.info(f"Automatically aligned input window to match forecaster: {input_len} steps ({args.input_sec:.2f}s at {args.resample_freq} Hz).")
-        else:
-            args.input_sec = 1.0 # 1.0s default
-            input_len = int(args.input_sec * args.resample_freq)
-    else:
+
+    if is_from_scratch:
+        logger.info(f"Initializing RNN backbone FROM SCRATCH with random weights ({args.rnn_type.upper()}, {args.latent_dim} units)...")
+        rnn_model = None
+        resolved_model_path = None
+        args.fine_tune_rnn = True  # Newly initialized backbone is trained end-to-end
+
+        if args.input_sec is None:
+            args.input_sec = 1.0  # 1.0s default
         input_len = int(args.input_sec * args.resample_freq)
-        if model_expected_input_steps is not None and input_len != model_expected_input_steps:
-            logger.warning(
-                f"Configured input_len ({input_len} steps) differs from pretrained model expected steps ({model_expected_input_steps} steps). "
-                f"Forcing input_len to {model_expected_input_steps} steps to match model architecture."
-            )
-            input_len = model_expected_input_steps
-            args.input_sec = input_len / args.resample_freq
+    else:
+        resolved_model_path = resolve_model_path(args.rnn_model_path)
+        if not resolved_model_path or not resolved_model_path.exists():
+            raise FileNotFoundError(f"Pretrained forecaster model not found at path: {args.rnn_model_path} (Resolved: {resolved_model_path})")
+            
+        logger.info(f"Loading pretrained RNN forecaster from {resolved_model_path}...")
+        rnn_model = tf.keras.models.load_model(str(resolved_model_path), compile=False)
+        
+        # Inquire expected input shape from the forecaster
+        model_expected_input_steps = rnn_model.input_shape[1] if hasattr(rnn_model, 'input_shape') and rnn_model.input_shape else None
+        
+        if args.input_sec is None:
+            if model_expected_input_steps is not None:
+                input_len = model_expected_input_steps
+                args.input_sec = input_len / args.resample_freq
+                logger.info(f"Automatically aligned input window to match forecaster: {input_len} steps ({args.input_sec:.2f}s at {args.resample_freq} Hz).")
+            else:
+                args.input_sec = 1.0  # 1.0s default
+                input_len = int(args.input_sec * args.resample_freq)
+        else:
+            input_len = int(args.input_sec * args.resample_freq)
+            if model_expected_input_steps is not None and input_len != model_expected_input_steps:
+                logger.warning(
+                    f"Configured input_len ({input_len} steps) differs from pretrained model expected steps ({model_expected_input_steps} steps). "
+                    f"Forcing input_len to {model_expected_input_steps} steps to match model architecture."
+                )
+                input_len = model_expected_input_steps
+                args.input_sec = input_len / args.resample_freq
             
     lead_time_samples = int(args.lead_time_sec * args.resample_freq)
     stride = int(args.stride_sec * args.resample_freq)
@@ -274,7 +290,10 @@ def main():
     logger.info(f"--- Anticipatory Classification Settings ---")
     logger.info(f"  - Dataset: {args.dataset_type.upper()}")
     logger.info(f"  - Channel: {args.channel}")
-    logger.info(f"  - Pretrained Model: {resolved_model_path.name}")
+    if is_from_scratch:
+        logger.info(f"  - Backbone: Random Initialization ({args.rnn_type.upper()} with {args.latent_dim} units)")
+    else:
+        logger.info(f"  - Pretrained Model: {resolved_model_path.name}")
     logger.info(f"  - Input Window: {input_len} samples ({args.input_sec:.2f} seconds)")
     logger.info(f"  - Lead Time (Anticipation X): {lead_time_samples} samples ({args.lead_time_sec:.2f} seconds ahead)")
     logger.info(f"  - Window Stride: {stride} samples ({args.stride_sec:.2f} seconds)")
@@ -531,6 +550,8 @@ def main():
         "learning_rate": args.learning_rate,
         "fine_tune_rnn": args.fine_tune_rnn,
         "optimizer_name": args.optimizer_name,
+        "latent_dim": getattr(args, "latent_dim", 32),
+        "rnn_type": getattr(args, "rnn_type", "lstm"),
     }
     if args.hidden_units_1 is not None:
         model_params["hidden_units_1"] = args.hidden_units_1
@@ -559,7 +580,7 @@ def main():
             except Exception:
                 logger.warning(f"Could not parse class_weight string '{args.class_weight}'. Defaulting to None.")
                 class_weight = None
-        logger.info(f"Using custom class weights: {class_weight}")
+            logger.info(f"Using custom class weights: {class_weight}")
     elif str(args.class_weight_mode).lower() in ["balanced", "auto", "true"]:
         train_y = np.array([idx[2] for idx in train_indices])
         n_samples = len(train_y)
@@ -594,7 +615,9 @@ def main():
         "n_train_samples": len(train_indices),
         "n_val_samples": len(val_indices),
         "validation_subject": val_subj_list[0] if val_subj_list else None,
-        "is_loso": is_loso_mode
+        "is_loso": is_loso_mode,
+        "from_scratch": is_from_scratch,
+        "rnn_model_path": str(args.rnn_model_path) if not is_from_scratch else None
     }
     if history and history.history:
         metrics_dict["history"] = {k: [float(x) for x in v] for k, v in history.history.items()}
@@ -607,7 +630,8 @@ def main():
     if args.output_model:
         out_path = Path(args.output_model)
     else:
-        out_path = config.OUTPUT_DIR / "models" / f"combined_anticipatory_classifier_{args.dataset_type}_{args.channel}_lead{int(args.lead_time_sec)}s.h5"
+        prefix = f"combined_scratch_{args.rnn_type}" if is_from_scratch else "combined_anticipatory"
+        out_path = config.OUTPUT_DIR / "models" / f"{prefix}_classifier_{args.dataset_type}_{args.channel}_lead{int(args.lead_time_sec)}s.h5"
         
     out_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info(f"Saving coupled model to {out_path}...")

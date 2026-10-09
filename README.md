@@ -719,9 +719,13 @@ This command will output:
 
 **Description**
 
-This module implements a Two-Stage coupled architecture where a Multi-Layer Perceptron (MLP) binary classifier is stacked directly on top of a frozen pre-trained RNN forecaster model. The coupled model classifies whether the subject is alert or drowsy based on temporal signal windows.
+This module implements a coupled architecture for driver drowsiness/sleepiness detection where a Multi-Layer Perceptron (MLP) binary classifier is stacked directly on top of a recurrent (`LSTM` or `GRU`) backbone.
 
-Training is performed on standard-scaled inputs using Binary Crossentropy loss, and evaluated with **Accuracy** as the final metric.
+The pipeline natively supports **two execution modes**:
+1. **Pre-Trained Forecasting Backbone (`.h5`)**: Extracts latent feature representations from a pre-trained self-supervised forecasting model. Can operate in frozen feature extractor mode (`fine_tune_rnn: false`) or end-to-end fine-tuning mode (`fine_tune_rnn: true`).
+2. **From Scratch Baseline (`rnn_model_path: null`)**: Initializes a fresh `LSTM` or `GRU` recurrent layer directly from scratch with random weights (`glorot_uniform`). The recurrent backbone is automatically unfrozen and trained end-to-end alongside the MLP classification head. This serves as an essential scientific ablation baseline to measure the performance gain provided by self-supervised pre-training.
+
+Training is performed on standardized signal windows using Binary Cross-Entropy loss, and evaluated with **Accuracy** and **ROC-AUC** metrics.
 
 ---
 
@@ -729,13 +733,15 @@ Training is performed on standard-scaled inputs using Binary Crossentropy loss, 
 
 Create configuration files under `configs/model_training_rnn_classifier/`:
 
+### A. Pre-Trained Backbone Mode (`.h5`)
 * **SEED-VIG Configuration** (e.g. `configs/model_training_rnn_classifier/seedvig_classify_example.yaml`):
   ```yaml
   dataset_type: "seed_vig"
   channel: "CP2"
   lead_time_sec: 30.0     # Anticipation lead time (target PERCLOS state at t + 30s)
   stride_sec: 5.0         # 5.0-second sliding stride
-  rnn_model_path: "outputs/models/best_rnn_predictor_seedvig_CP2.h5"  # Pre-trained RNN forecaster model (.h5)
+  rnn_model_path: "outputs/models/best_rnn_predictor_seedvig_CP2.h5"  # Pre-trained RNN forecaster (.h5)
+  fine_tune_rnn: false    # false: frozen backbone | true: end-to-end fine-tuning
   epochs: 10
   batch_size: 32
   learning_rate: 0.001
@@ -747,6 +753,27 @@ Create configuration files under `configs/model_training_rnn_classifier/`:
   output_model: null
   ```
 
+### B. From Scratch Baseline Mode (`rnn_model_path: null`)
+* **Training from Scratch with Random Weights**:
+  ```yaml
+  dataset_type: "seed_vig"
+  channel: "CP2"
+  lead_time_sec: 0.0
+  stride_sec: 5.0
+  rnn_model_path: null    # null / "none" / "random": Instantiates fresh backbone with random weights
+  rnn_type: "lstm"        # Recurrent architecture: "lstm" or "gru"
+  latent_dim: 32          # Number of hidden units in the recurrent backbone
+  epochs: 15
+  batch_size: 32
+  learning_rate: 0.001
+  train_split: 0.8
+  drowsiness_threshold: 0.5
+  class_weight_mode: "balanced"
+  save_plot: true
+  output_plot: null
+  output_model: null
+  ```
+
 * **DROZY Configuration** (e.g. `configs/model_training_rnn_classifier/drozy_classify_example.yaml`):
   ```yaml
   dataset_type: "drozy"
@@ -754,7 +781,7 @@ Create configuration files under `configs/model_training_rnn_classifier/`:
   subjects: [1, 2, 3]
   lead_time_sec: 0.0
   stride_sec: 5.0
-  rnn_model_path: "outputs/models/best_rnn_predictor_seedvig_CP2.h5"  # Path to pre-trained model (.h5)
+  rnn_model_path: "outputs/models/best_rnn_predictor_seedvig_CP2.h5"  # Or null to train from scratch
   epochs: 10
   batch_size: 32
   learning_rate: 0.001
@@ -770,14 +797,29 @@ Create configuration files under `configs/model_training_rnn_classifier/`:
 
 ## 2. Executing Training and Generating History Plots
 
-Run `experiments/train_rnn_classifier.py` to couple the pre-trained RNN latent backbone, train the MLP classification layers, and automatically generate training/validation curves.
+Run `experiments/train_rnn_classifier.py` to train the coupled classifier and automatically generate training/validation curves.
 
-* **Training via YAML config**:
+* **Training with Pre-Trained Backbone via YAML config**:
   ```bash
   python3 experiments/train_rnn_classifier.py --config configs/model_training_rnn_classifier/seedvig_classify_example.yaml
   ```
 
-* **Training with Anticipation Lead Time ($X = 30\text{s}$), Balanced Class Weights, and Plot Output**:
+* **Training from Scratch (Random Backbone) via CLI**:
+  ```bash
+  python3 experiments/train_rnn_classifier.py \
+      --dataset-type seed_vig \
+      --channel CP2 \
+      --rnn-model-path null \
+      --rnn-type lstm \
+      --latent-dim 32 \
+      --lead-time-sec 0.0 \
+      --epochs 15 \
+      --batch-size 32 \
+      --class-weight-mode balanced \
+      --output-plot outputs/scratch_classifier_history.png
+  ```
+
+* **Training with Anticipation Lead Time ($X = 30\text{s}$), Pre-Trained Backbone, and Balanced Class Weights**:
   ```bash
   python3 experiments/train_rnn_classifier.py \
       --dataset-type seed_vig \
@@ -807,7 +849,7 @@ By default (`--save-plot`, `default=True`), training outputs a comparative plot 
 
 ## 3. Running Integration Tests
 
-To run the integration tests verifying the classification pipeline functionality:
+To run the integration tests verifying both pre-trained and from-scratch classification pipelines:
 ```bash
 python3 -m unittest tests/test_rnn_classification.py
 ```
@@ -1136,23 +1178,192 @@ Upon completing all folds, the orchestrator generates a comprehensive multi-pane
 
 ---
 
-## 4. LOSO Outputs and Summary
-
-Inside the specified `--output_folder` (under `outputs/`):
-* **`loso_summary.json`**: Global aggregated statistics:
-  - `mean_val_accuracy` and `std_val_accuracy` ($\mu \pm \sigma$)
-  - `mean_val_loss` and `std_val_loss`
-  - Per-subject breakdown of validation metrics and sample counts.
-* **`loso_results.jsonl`**: Detailed line-by-line log for each fold.
-* **`loso_evolution_overview.png`**: The complete multi-panel visual summary.
-* **`fold_subj_XX/`**: Per-fold directories containing model weights (`.h5`), training curves (`history.png`), and raw fold metrics (`metrics.json`).
-* **`log.txt`**: Consolidated execution logs.
-
----
-
 ## 5. Running LOSO Unit Tests
 
 To run the unit tests verifying LOSO subject discovery and multi-panel plot generation:
 ```bash
 python3 -m unittest tests/test_rnn_loso.py
+```
+
+---
+
+# Joint Multi-Task Training (Forecasting + Classification)
+
+**Description**
+
+The Joint Multi-Task Training pipeline unifies physiological time-series signal forecasting and driver drowsiness classification into a single Keras Functional model. 
+
+Instead of isolating the feature extraction backbone solely for classification (which risks overfitting on noise or dataset artifacts) or freezing a pre-trained predictor, the joint model optimizes both tasks simultaneously from scratch. The physiological signal forecasting task acts as an inductive bias and temporal regularizer, forcing the recurrent latent space to preserve true brainwave dynamics ($\theta, \alpha, \beta$ rhythms) while learning to distinguish drowsiness.
+
+```
+                  ┌─────────────────────────────────────────┐
+                  │          Input Signal Window            │
+                  │   X ∈ ℝ^(N × T × 1)  (e.g., T = 100)     │
+                  └────────────────────┬────────────────────┘
+                                       │
+                                       ▼
+                  ┌─────────────────────────────────────────┐
+                  │        Shared Recurrent Backbone        │
+                  │       LSTM or GRU (random weights)      │
+                  │        Output: Latent Vector h_t        │
+                  └──────────────┬──────────────────┬───────┘
+                                 │                  │
+               ┌─────────────────┴────┐      ┌──────┴────────────────┐
+               │                      │      │                       │
+               ▼                      ▼      ▼                       ▼
+     ┌───────────────────┐                 ┌───────────────────────────┐
+     │ Forecast Head     │                 │ Classification Head       │
+     │ Dense(forecast)   │                 │ Dense + Dropout (+BN)     │
+     │ Linear Activation │                 │ Sigmoid Activation        │
+     └─────────┬─────────┘                 └─────────────┬─────────────┘
+               │                                         │
+               ▼                                         ▼
+     ŷ_forecast ∈ ℝ^(1)                        ŷ_clf ∈ [0.0, 1.0]
+     (Loss: MSE)                               (Loss: BCE)
+               │                                         │
+               └─────────────────┬───────────────────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │ Combined Total Loss   │
+                     │ L_total = α·L_clf +   │
+                     │          (1-α)·L_pred │
+                     └───────────────────────┘
+```
+
+### Key Design Principles:
+1. **Single Loss Balance Parameter ($\alpha \in [0.0, 1.0]$):**
+   $$\mathcal{L}_{\text{total}} = \alpha \cdot \mathcal{L}_{\text{classification}} + (1 - \alpha) \cdot \mathcal{L}_{\text{forecasting}}$$
+   - $\alpha = 1.0$: Pure classification mode.
+   - $\alpha = 0.0$: Pure forecasting mode.
+   - $\alpha = 0.5$: Balanced multi-task learning.
+2. **Zero Data Leakage (Strict Random Initialization):**
+   All layers across the shared backbone, forecasting head, and classification head are initialized from scratch with Glorot uniform weights (`glorot_uniform`). No pre-trained weights are imported.
+3. **Flexible Component Pairing:**
+   Supports any combination of forecasting backbone (`v0` LSTM, `v1` GRU) and classification head (`v0` standard MLP, `v1` Batch-Normalized MLP).
+
+---
+
+## 1. Single Execution (`experiments/train_joint_model.py`)
+
+Train a joint multi-task model using either a YAML configuration file or direct CLI parameters.
+
+### Configuration Template (`configs/model_training_joint/seedvig_joint_example.yaml`)
+```yaml
+dataset_type: "seed_vig"      # "seed_vig" or "drozy"
+channel: "CP2"
+predict_version: "v0"         # "v0" (LSTM) or "v1" (GRU)
+classifier_version: "v1"      # "v0" (Standard MLP) or "v1" (BN-MLP)
+
+# Multi-Task Balance
+loss_alpha: 0.5               # alpha in [0.0, 1.0]
+
+# Signal & Window Parameters
+lead_time_sec: 0.0            # 0.0 for immediate prediction
+forecast_steps: 1             # Number of future steps to forecast
+input_sec: 1.0                # Past window duration (1.0s = 100 samples at 100 Hz)
+stride_sec: 5.0               # Stride for epoch windowing
+train_ratio: 0.8              # Temporal train/val split (when not using LOSO)
+
+# Training Hyperparameters
+latent_dim: 32                # Shared recurrent units
+learning_rate: 0.001
+epochs: 15
+batch_size: 32
+save_plot: true
+```
+
+### Command-Line Execution Examples:
+
+* **Train using YAML Configuration**:
+  ```bash
+  python3 experiments/train_joint_model.py \
+      --config configs/model_training_joint/seedvig_joint_example.yaml \
+      --output-model outputs/joint_model_seedvig.h5 \
+      --output-plot outputs/joint_history_seedvig.png \
+      --metrics-json-path outputs/joint_metrics_seedvig.json
+  ```
+
+* **Override Parameters Directly via CLI**:
+  ```bash
+  python3 experiments/train_joint_model.py \
+      --dataset-type seed_vig \
+      --channel CP2 \
+      --predict-version v0 \
+      --classifier-version v1 \
+      --loss-alpha 0.6 \
+      --latent-dim 32 \
+      --epochs 20 \
+      --batch-size 32 \
+      --learning-rate 0.001 \
+      --output-model outputs/joint_model_custom.h5 \
+      --output-plot outputs/joint_history_custom.png
+  ```
+
+* **Train Single Fold in Leave-One-Subject-Out (LOSO) Mode**:
+  ```bash
+  python3 experiments/train_joint_model.py \
+      --config configs/model_training_joint/seedvig_joint_example.yaml \
+      --validation-subject 1 \
+      --output-model outputs/joint_model_loso_s01.h5 \
+      --output-plot outputs/joint_history_loso_s01.png
+  ```
+
+---
+
+## 2. Automated Comparative 3-Panel Training History Plot
+
+The script automatically generates a publication-ready 3-panel comparative diagnostic plot (`outputs/joint_history_*.png`):
+
+1. **Panel 1: Loss Dynamics & Task Balance**:
+   - Total Loss ($\mathcal{L}_{\text{total}}$): Train vs. Val
+   - Weighted Classification Loss ($\alpha \cdot \mathcal{L}_{\text{clf}}$)
+   - Weighted Forecasting Loss ($(1 - \alpha) \cdot \mathcal{L}_{\text{forecast}}$)
+2. **Panel 2: Classification Performance**:
+   - Accuracy ($\%$) on Train and Validation sets.
+   - Area Under the ROC Curve (AUC) on Train and Validation sets.
+3. **Panel 3: Forecasting Signal Fidelity**:
+   - Mean Absolute Error (MAE): Train vs. Val
+   - Root Mean Squared Error (RMSE): Train vs. Val
+
+---
+
+## 3. Joint Multi-Task Hyperparameter Grid Search (`experiments/run_joint_gridsearch.py`)
+
+Explore multiple architectures, loss balance values ($\alpha$), recurrent latent dimensions, and window strides simultaneously under either Temporal Validation or Leave-One-Subject-Out (LOSO) Cross-Validation.
+
+### A. Temporal Split Grid Search (`configs/hyperparameter_search_rnn/joint_gridsearch_temporal_example.yaml`)
+Executes intra-session chronological evaluation across combinations of $\alpha \in \{0.2, 0.5, 0.8\}$, backbone architectures (`v0` LSTM, `v1` GRU), and `latent_dim` $\in \{32, 64\}$:
+
+```bash
+python3 experiments/run_joint_gridsearch.py \
+    --config configs/hyperparameter_search_rnn/joint_gridsearch_temporal_example.yaml \
+    --output-folder joint_gridsearch_temporal
+```
+
+### B. Leave-One-Subject-Out (LOSO) Grid Search (`configs/hyperparameter_search_rnn/joint_gridsearch_loso_example.yaml`)
+Evaluates each hyperparameter candidate across multiple subjects (e.g., Subjects 1, 2, 3), calculating mean accuracy and standard deviation ($\mu \pm \sigma$) across folds:
+
+```bash
+python3 experiments/run_joint_gridsearch.py \
+    --config configs/hyperparameter_search_rnn/joint_gridsearch_loso_example.yaml \
+    --output-folder joint_gridsearch_loso
+```
+
+* Override evaluated subjects directly from CLI:
+  ```bash
+  python3 experiments/run_joint_gridsearch.py \
+      --config configs/hyperparameter_search_rnn/joint_gridsearch_loso_example.yaml \
+      --output-folder joint_gridsearch_loso_subset \
+      --subjects 1 2 3 4
+  ```
+
+---
+
+## 4. Running Joint Training Unit Tests
+
+To verify architecture compatibility, dual batch generators, loss formulations, and end-to-end grid search execution:
+```bash
+python3 -m unittest tests/test_joint_training.py
+python3 -m unittest tests/test_joint_gridsearch.py
 ```

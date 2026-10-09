@@ -110,5 +110,93 @@ class TestRNNClassification(unittest.TestCase):
         self.assertEqual(res_clf.returncode, 0)
         self.assertTrue(classifier_model_path.exists())
 
+    def test_classification_from_scratch_lstm_and_gru_pipeline(self):
+        env = os.environ.copy()
+        workspace_root = Path(__file__).parent.parent
+        env["PYTHONPATH"] = str(workspace_root / "src") + os.pathsep + env.get("PYTHONPATH", "")
+        env["SEED_VIG_DIR"] = str(self.signals_dir)
+        env["SEED_VIG_LABELS"] = str(self.labels_dir)
+
+        # 1. Train from scratch using LSTM backbone (rnn-model-path null)
+        lstm_model_path = self.test_path / "test_scratch_lstm_model.h5"
+        train_lstm_cmd = [
+            sys.executable, "experiments/train_rnn_classifier.py",
+            "--dataset-type", "seed_vig",
+            "--channel", "CP2",
+            "--model-version", "v0",
+            "--rnn-model-path", "null",
+            "--rnn-type", "lstm",
+            "--latent-dim", "16",
+            "--input-sec", "1.0",
+            "--lead-time-sec", "5.0",
+            "--stride-sec", "5.0",
+            "--epochs", "1",
+            "--batch-size", "4",
+            "--learning-rate", "0.01",
+            "--output-model", str(lstm_model_path),
+            "--force-cpu"
+        ]
+        logging.info("Training classifier from scratch (LSTM) via subprocess...")
+        res_lstm = subprocess.run(train_lstm_cmd, capture_output=True, text=True, env=env)
+        if res_lstm.returncode != 0:
+            print("STDOUT:", res_lstm.stdout)
+            print("STDERR:", res_lstm.stderr)
+        self.assertEqual(res_lstm.returncode, 0)
+        self.assertTrue(lstm_model_path.exists())
+
+        # 2. Train from scratch using GRU backbone and v1 architecture
+        gru_model_path = self.test_path / "test_scratch_gru_model.h5"
+        train_gru_cmd = [
+            sys.executable, "experiments/train_rnn_classifier.py",
+            "--dataset-type", "seed_vig",
+            "--channel", "CP2",
+            "--model-version", "v1",
+            "--rnn-model-path", "random",
+            "--rnn-type", "gru",
+            "--latent-dim", "8",
+            "--input-sec", "1.0",
+            "--lead-time-sec", "0.0",
+            "--stride-sec", "5.0",
+            "--epochs", "1",
+            "--batch-size", "4",
+            "--learning-rate", "0.01",
+            "--output-model", str(gru_model_path),
+            "--force-cpu"
+        ]
+        logging.info("Training classifier from scratch (GRU v1) via subprocess...")
+        res_gru = subprocess.run(train_gru_cmd, capture_output=True, text=True, env=env)
+        if res_gru.returncode != 0:
+            print("STDOUT:", res_gru.stdout)
+            print("STDERR:", res_gru.stderr)
+        self.assertEqual(res_gru.returncode, 0)
+        self.assertTrue(gru_model_path.exists())
+
+    def test_direct_coupled_model_creation_from_scratch(self):
+        from scalogram_cnn_project.models_for_prediction_classification import create_coupled_classifier_model
+        
+        for version in ["v0", "v1"]:
+            for rnn_type in ["lstm", "gru"]:
+                params = {
+                    "input_len": 100,
+                    "latent_dim": 24,
+                    "rnn_type": rnn_type,
+                    "learning_rate": 0.001,
+                    "hidden_units_1": 32,
+                    "hidden_units_2": 16,
+                    "dropout_1": 0.2,
+                    "dropout_2": 0.1,
+                    "fine_tune_rnn": True
+                }
+                # Test with rnn_model=None
+                model_none = create_coupled_classifier_model(version, None, params)
+                self.assertIsNotNone(model_none)
+                # Test with rnn_model="random"
+                model_rand = create_coupled_classifier_model(version, "random", params)
+                self.assertIsNotNone(model_rand)
+                
+                # Check model input/output shapes
+                self.assertEqual(model_none.input_shape, (None, 100, 1))
+                self.assertEqual(model_none.output_shape, (None, 1))
+
 if __name__ == "__main__":
     unittest.main()

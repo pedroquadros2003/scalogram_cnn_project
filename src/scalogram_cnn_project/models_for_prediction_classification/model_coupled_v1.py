@@ -38,30 +38,46 @@ def create_model(rnn_model, parameters: dict):
     
     logger.info(f"Building Coupled Classifier v1 (BN + High Capacity, Input steps: {input_len}, Fine-tune: {fine_tune}, LR: {lr})...")
     
-    # Locate recurrent layer in pre-trained RNN model
-    recurrent_layer = None
-    for layer in rnn_model.layers:
-        if isinstance(layer, (tf.keras.layers.LSTM, tf.keras.layers.GRU, tf.keras.layers.RNN)):
-            recurrent_layer = layer
-            break
-            
+    # Check if we should initialize RNN backbone from scratch with random weights
+    is_random_backbone = rnn_model is None or (isinstance(rnn_model, str) and rnn_model.lower() in ["none", "null", "random", "scratch"])
+    
     inp = tf.keras.layers.Input(shape=(input_len, 1), name="signal_input")
     x = inp
-    
-    if recurrent_layer is not None:
-        latent_dim = getattr(recurrent_layer, "units", 32)
-        logger.info(f"Extracting latent state vector from recurrent layer '{recurrent_layer.name}' ({latent_dim} units)...")
-        for l in rnn_model.layers:
-            x = l(x)
-            if l == recurrent_layer:
-                break
-    else:
-        logger.info("Using penultimate layer as feature extractor backbone...")
-        for l in rnn_model.layers[:-1]:
-            x = l(x)
+
+    if is_random_backbone:
+        latent_dim = parameters.get("latent_dim", 32)
+        rnn_type = str(parameters.get("rnn_type", "lstm")).lower()
+        logger.info(f"Instantiating fresh {rnn_type.upper()} backbone from scratch with random weights ({latent_dim} units)...")
+        if rnn_type == "gru":
+            x = tf.keras.layers.GRU(latent_dim, name="random_gru_backbone")(inp)
+        else:
+            x = tf.keras.layers.LSTM(latent_dim, name="random_lstm_backbone")(inp)
             
-    feature_extractor = tf.keras.Model(inputs=inp, outputs=x, name="rnn_latent_backbone")
-    feature_extractor.trainable = fine_tune
+        feature_extractor = tf.keras.Model(inputs=inp, outputs=x, name="rnn_latent_backbone")
+        # Freshly initialized backbone is trainable by default unless fine_tune_rnn is explicitly False
+        feature_extractor.trainable = parameters.get("fine_tune_rnn", True)
+    else:
+        # Locate recurrent layer in pre-trained RNN model
+        recurrent_layer = None
+        for layer in rnn_model.layers:
+            if isinstance(layer, (tf.keras.layers.LSTM, tf.keras.layers.GRU, tf.keras.layers.RNN)):
+                recurrent_layer = layer
+                break
+                
+        if recurrent_layer is not None:
+            latent_dim = getattr(recurrent_layer, "units", 32)
+            logger.info(f"Extracting latent state vector from recurrent layer '{recurrent_layer.name}' ({latent_dim} units)...")
+            for l in rnn_model.layers:
+                x = l(x)
+                if l == recurrent_layer:
+                    break
+        else:
+            logger.info("Using penultimate layer as feature extractor backbone...")
+            for l in rnn_model.layers[:-1]:
+                x = l(x)
+                
+        feature_extractor = tf.keras.Model(inputs=inp, outputs=x, name="rnn_latent_backbone")
+        feature_extractor.trainable = fine_tune
     
     # Classification Head with Batch Normalization
     clf_model = tf.keras.Sequential([

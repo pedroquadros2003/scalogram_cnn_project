@@ -1,0 +1,51 @@
+# ==============================================================================
+# Joint Multi-Task Training Configuration: Signal Forecasting + Vigilance Classification
+# Dataset: SEED-VIG (CP2 Channel)
+# Architecture: Shared LSTM (v0) + Linear Forecast Head + MLP Classifier (v0)
+# Loss Balance: L_total = alpha * L_clf + (1 - alpha) * L_forecast
+# ==============================================================================
+
+dataset_type: "seed_vig"
+channel: "CP2"
+predict_version: "v0"      # "v0" for LSTM backbone, "v1" for GRU backbone
+classifier_version: "v0"   # "v0" for standard MLP, "v1" for Batch Normalized MLP
+
+# Single Trade-off Balance Parameter alpha in [0.0, 1.0]:
+#   - 1.0: Pure classification (0% forecast loss weight)
+#   - 0.0: Pure forecasting (0% classification loss weight)
+#   - 0.5: Equal 50/50 balance (classification + regularizing forecast loss)
+loss_alpha: 0.5
+
+# Lead time for vigilance anticipation (target PERCLOS state at t + lead_time_sec)
+lead_time_sec: 0.0
+
+# Number of future voltage samples to forecast (default: 1 step = 10 ms at 100 Hz)
+forecast_steps: 1
+
+# Input window duration in seconds (1.0 s = 100 samples)
+input_sec: 1.0
+
+# Sliding window stride in seconds
+stride_sec: 5.0
+
+# Number of recurrent units in the shared backbone (initialized from scratch)
+latent_dim: 32
+
+# Classification head hyperparameters
+hidden_units_1: 64
+hidden_units_2: 32
+dropout_1: 0.3
+dropout_2: 0.2
+
+# Training settings
+epochs: 15
+batch_size: 32
+learning_rate: 0.001
+optimizer_name: "adam"
+train_split: 0.8
+drowsiness_threshold: 0.5
+
+# Visualization & Logging
+save_plot: true
+output_plot: null
+output_model: null
