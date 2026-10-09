@@ -9,6 +9,13 @@ from pathlib import Path
 import numpy as np
 import yaml
 
+# Ensure project root and src are in sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
 from scalogram_cnn_project.utils.dict_product import dict_product
 from scalogram_cnn_project.utils.simplify_config_space import simplify_config_space
 from scalogram_cnn_project.utils.make_hash_id import make_hash_id
@@ -17,6 +24,7 @@ from experiments.run_rnn_classifier_loso import discover_dataset_subjects, plot_
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 
 def main():
