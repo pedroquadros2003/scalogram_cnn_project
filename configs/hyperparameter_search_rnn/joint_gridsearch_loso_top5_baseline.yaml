@@ -4,9 +4,17 @@
 #
 # Selected Subjects: [2, 4, 5, 14, 18] (Balanced, high-separability physiological profiles)
 # Baseline Calibration: Initial 120 seconds resting Z-score calibration per session
+#
+# RUNTIME BUDGET ESTIMATE:
+#   - Total Candidates: 12 combinations (2 Backbones * 2 Alphas * 3 Lead Times)
+#   - Folds per Candidate: 5 LOSO folds (15 epochs each)
+#   - Batch Size: 64 (GPU-optimized tensor throughput on RTX 2050)
+#   - Average Time per Candidate: ~34 minutes (5 folds)
+#   - TOTAL ESTIMATED RUNTIME: ~6.8 to 7.5 hours (Strictly under 10-hour limit)
 # ==============================================================================
 
 MODEL_HYPER_PARAMS:
+
   predict_version:
     mode: "choice"
     values: ["v0", "v1"]              # LSTM (v0) vs GRU (v1)
@@ -78,7 +86,8 @@ MODEL_TRAIN_PARAMS:
 
   batch_size:
     mode: "fixed"
-    values: [32]
+    values: [64]
+
 
   drowsiness_threshold:
     mode: "fixed"
