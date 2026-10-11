@@ -28,6 +28,10 @@ input_sec: 1.0
 # Sliding window stride in seconds
 stride_sec: 5.0
 
+# Individual Z-score baseline calibration (initial resting/vigilance duration in seconds)
+baseline_sec: 120.0
+
+
 # Number of recurrent units in the shared backbone (initialized from scratch)
 latent_dim: 32
 

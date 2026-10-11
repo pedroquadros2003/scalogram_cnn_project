@@ -1350,13 +1350,15 @@ python3 experiments/run_joint_gridsearch.py \
     --output-folder joint_gridsearch_loso
 ```
 
-* Override evaluated subjects directly from CLI:
-  ```bash
-  python3 experiments/run_joint_gridsearch.py \
-      --config configs/hyperparameter_search_rnn/joint_gridsearch_loso_example.yaml \
-      --output-folder joint_gridsearch_loso_subset \
-      --subjects 1 2 3 4
-  ```
+### C. Top-5 Balanced Subjects with Individual Baseline Z-Score Calibration (`configs/hyperparameter_search_rnn/joint_gridsearch_loso_top5_baseline.yaml`)
+Normalizes raw signals by computing mean and standard deviation solely over the initial 120 seconds of resting/vigilance (`--baseline-sec 120.0`), eliminating inter-subject skull impedance differences, and tests on the top 5 cleanest and most balanced subjects in SEED-VIG (`[2, 4, 5, 14, 18]`):
+
+```bash
+python3 experiments/run_joint_gridsearch.py \
+    --config configs/hyperparameter_search_rnn/joint_gridsearch_loso_top5_baseline.yaml \
+    --output-folder joint_gridsearch_loso_top5_baseline
+```
+
 
 ---
 

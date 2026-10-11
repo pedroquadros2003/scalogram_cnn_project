@@ -53,6 +53,7 @@ def main():
     parser.add_argument("--subjects", type=int, nargs="+", default=None, help="Override validation subject IDs for LOSO mode")
     parser.add_argument("--save-plot", action=argparse.BooleanOptionalAction, default=True, help="Whether to generate diagnostic plots for candidates/folds")
     parser.add_argument("--force-cpu", action="store_true", help="Force candidate executions to run on CPU")
+    parser.add_argument("--baseline-sec", type=float, default=None, help="Override baseline calibration duration in seconds")
     parser.add_argument("--loso", action="store_true", help="Force Leave-One-Subject-Out (LOSO) mode even if not specified in YAML")
 
     args = parser.parse_args()
@@ -178,6 +179,8 @@ def main():
                 fold_config = dict(cand_params)
                 fold_config["validation_subject"] = val_subj
                 fold_config["save_plot"] = args.save_plot
+                if args.baseline_sec is not None:
+                    fold_config["baseline_sec"] = args.baseline_sec
 
                 temp_config_path = fold_dir / "config.yaml"
                 with open(temp_config_path, "w") as f:
@@ -282,9 +285,13 @@ def main():
 
         else:
             # --- TEMPORAL SPLIT EVALUATION ---
+            temp_config = dict(cand_params)
+            if args.baseline_sec is not None:
+                temp_config["baseline_sec"] = args.baseline_sec
+
             temp_config_path = cand_dir / "config.yaml"
             with open(temp_config_path, "w") as f:
-                yaml.dump(cand_params, f, default_flow_style=False)
+                yaml.dump(temp_config, f, default_flow_style=False)
 
             metrics_json_path = cand_dir / "metrics.json"
             plot_path = cand_dir / "history.png"

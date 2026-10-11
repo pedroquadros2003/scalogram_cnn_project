@@ -178,6 +178,7 @@ def main():
     parser.add_argument("--drowsiness-threshold", type=float, default=None, help="Threshold for drowsiness (PERCLOS >= val for SEED-VIG, KSS >= val for DROZY)")
     parser.add_argument("--resample-freq", type=float, default=100.0, help="Frequency to resample the signal to (Hz)")
     parser.add_argument("--force-cpu", action="store_true", help="Force training to run on CPU")
+    parser.add_argument("--baseline-sec", type=float, default=120.0, help="Duration in seconds of the initial resting period used for individual Z-score baseline calibration (default: 120.0s = 2 min; set to 0.0 to normalize over the entire signal)")
     parser.add_argument("--output-model", type=str, default=None, help="Path to save the trained joint model")
     parser.add_argument("--output-plot", type=str, default=None, help="Path to save comparative training vs validation curves plot")
     parser.add_argument("--save-plot", action=argparse.BooleanOptionalAction, default=True, help="Whether to generate and save training/validation comparison plots")
@@ -224,6 +225,8 @@ def main():
                     args.subjects = [int(v.strip()) for v in val.split(",") if v.strip()]
                 else:
                     args.subjects = val
+            elif norm_key in ["baseline_sec", "baseline_duration_sec"]:
+                args.baseline_sec = float(val)
             elif hasattr(args, norm_key):
                 setattr(args, norm_key, val)
                 
@@ -352,8 +355,17 @@ def main():
                         kss_val = config.drozy_kss_scale[subj_id][sess_id]
                         drowsy_label = 1 if kss_val >= args.drowsiness_threshold else 0
                         
-                    mean = np.mean(signal)
-                    std = np.std(signal)
+                    baseline_sec = float(getattr(args, "baseline_sec", 120.0))
+                    if baseline_sec > 0.0 and len(signal) > int(baseline_sec * sfreq):
+                        baseline_samples = int(baseline_sec * sfreq)
+                        mean = float(np.mean(signal[:baseline_samples]))
+                        std = float(np.std(signal[:baseline_samples]))
+                        if std <= 1e-6:
+                            std = float(np.std(signal)) or 1.0
+                        logger.info(f"  Applied Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s: mean={mean:.3f}, std={std:.3f})")
+                    else:
+                        mean = float(np.mean(signal))
+                        std = float(np.std(signal))
                     norm_sig = (signal - mean) / std if std > 0 else (signal - mean)
                     
                     sig_idx = len(normalized_signals)
@@ -431,7 +443,15 @@ def main():
                 n_train = int(n_pairs * args.train_split)
                 neglected = int(np.ceil(total_window_span / stride))
                 
-                if n_train > 0:
+                baseline_sec = float(getattr(args, "baseline_sec", 120.0))
+                if baseline_sec > 0.0 and len(signal) > int(baseline_sec * sfreq):
+                    baseline_samples = int(baseline_sec * sfreq)
+                    mean = float(np.mean(signal[:baseline_samples]))
+                    std = float(np.std(signal[:baseline_samples]))
+                    if std <= 1e-6:
+                        std = float(np.std(signal)) or 1.0
+                    logger.info(f"  Applied Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s: mean={mean:.3f}, std={std:.3f})")
+                elif n_train > 0:
                     train_portion = signal[:(n_train - 1) * stride + total_window_span]
                     mean = np.mean(train_portion)
                     std = np.std(train_portion)

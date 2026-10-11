@@ -1,0 +1,96 @@
+# ==============================================================================
+# Joint Multi-Task Grid Search Configuration: LOSO Top-5 Subjects + Baseline Calibration
+# Validation Strategy: Leave-One-Subject-Out (LOSO) Cross-Validation
+#
+# Selected Subjects: [2, 4, 5, 14, 18] (Balanced, high-separability physiological profiles)
+# Baseline Calibration: Initial 120 seconds resting Z-score calibration per session
+# ==============================================================================
+
+MODEL_HYPER_PARAMS:
+  predict_version:
+    mode: "choice"
+    values: ["v0", "v1"]              # LSTM (v0) vs GRU (v1)
+
+  classifier_version:
+    mode: "fixed"
+    values: ["v1"]                    # BN-MLP Head (validated superior in Grid 1)
+
+  loss_alpha:
+    mode: "choice"
+    values: [0.5, 0.7]                # Balanced (0.5) vs Classification-Prioritized (0.7)
+
+  latent_dim:
+    mode: "fixed"
+    values: [32]
+
+  learning_rate:
+    mode: "fixed"
+    values: [0.001]
+
+  hidden_units_1:
+    mode: "fixed"
+    values: [64]
+
+  hidden_units_2:
+    mode: "fixed"
+    values: [32]
+
+  dropout_1:
+    mode: "fixed"
+    values: [0.3]
+
+  dropout_2:
+    mode: "fixed"
+    values: [0.2]
+
+  optimizer_name:
+    mode: "fixed"
+    values: ["adam"]
+
+MODEL_TRAIN_PARAMS:
+  dataset_type:
+    mode: "fixed"
+    values: ["seed_vig"]
+
+  channel:
+    mode: "fixed"
+    values: ["CP2"]
+
+  lead_time_sec:
+    mode: "choice"
+    values: [0.0, 5.0, 30.0]          # Immediate vs 5s vs 30s anticipatory detection
+
+  forecast_steps:
+    mode: "fixed"
+    values: [1]
+
+  input_sec:
+    mode: "fixed"
+    values: [1.0]
+
+  stride_sec:
+    mode: "fixed"
+    values: [5.0]
+
+  epochs:
+    mode: "fixed"
+    values: [15]
+
+  batch_size:
+    mode: "fixed"
+    values: [32]
+
+  drowsiness_threshold:
+    mode: "fixed"
+    values: [0.5]
+
+  # Individual Z-score calibration over initial 120s of resting/vigilance
+  baseline_sec:
+    mode: "fixed"
+    values: [120.0]
+
+  # Top-5 cleanest and most balanced subjects in SEED-VIG (excluding outlier S01 and skewed S13)
+  subjects:
+    mode: "fixed"
+    values:
+      - [2, 4, 5, 14, 18]

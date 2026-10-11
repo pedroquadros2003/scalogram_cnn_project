@@ -57,6 +57,8 @@ configs/hyperparameter_search_rnn/*
 !configs/hyperparameter_search_rnn/seedvig_loso_classifier_grid_example.yaml
 !configs/hyperparameter_search_rnn/joint_gridsearch_temporal_example.yaml
 !configs/hyperparameter_search_rnn/joint_gridsearch_loso_example.yaml
+!configs/hyperparameter_search_rnn/joint_gridsearch_loso_top5_baseline.yaml
+
 
 
 # Ignore custom scalogram generator yaml configurations created by users
