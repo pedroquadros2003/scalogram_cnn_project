@@ -129,5 +129,97 @@ class TestJointTraining(unittest.TestCase):
         self.assertTrue(plot_path.exists())
         self.assertTrue(metrics_json_path.exists())
 
+    def test_multichannel_model_creation(self):
+        from scalogram_cnn_project.models_for_joint_training import create_joint_model
+        
+        for p_ver in ["v0", "v1"]:
+            for c_ver in ["v0", "v1"]:
+                params = {
+                    "input_len": 100,
+                    "num_channels": 4,
+                    "forecast_steps": 1,
+                    "latent_dim": 16,
+                    "loss_alpha": 0.5,
+                    "learning_rate": 0.001,
+                }
+                model = create_joint_model(p_ver, c_ver, params)
+                self.assertIsNotNone(model)
+                self.assertEqual(model.input_shape, (None, 100, 4))
+                self.assertIn("forecast_output", model.output_names)
+                self.assertIn("classification_output", model.output_names)
+                out_shapes = {name: tuple(out.shape) for name, out in zip(model.output_names, model.outputs)}
+                self.assertEqual(out_shapes["forecast_output"], (None, 4))
+                self.assertEqual(out_shapes["classification_output"], (None, 1))
+
+    def test_multichannel_joint_sequence(self):
+        from scalogram_cnn_project.utils.joint_sequence import JointSequence
+        
+        signals = [np.random.randn(2000, 4).astype(np.float32)]
+        indices = [(0, i, np.random.randn(4).astype(np.float32), int(np.random.choice([0, 1]))) for i in range(0, 1500, 50)]
+        
+        seq = JointSequence(
+            loaded_signals=signals,
+            indices_with_dual_labels=indices,
+            input_len=100,
+            forecast_steps=1,
+            batch_size=8,
+            shuffle=True
+        )
+        self.assertGreater(len(seq), 0)
+        batch_x, batch_y = seq[0]
+        
+        self.assertEqual(batch_x.shape, (8, 100, 4))
+        self.assertIn("forecast_output", batch_y)
+        self.assertIn("classification_output", batch_y)
+        self.assertEqual(batch_y["forecast_output"].shape, (8, 4))
+        self.assertEqual(batch_y["classification_output"].shape, (8, 1))
+
+    def test_multichannel_joint_training_pipeline_subprocess(self):
+        import json
+        env = os.environ.copy()
+        workspace_root = Path(__file__).parent.parent
+        env["PYTHONPATH"] = str(workspace_root / "src") + os.pathsep + env.get("PYTHONPATH", "")
+        env["SEED_VIG_DIR"] = str(self.signals_dir)
+        env["SEED_VIG_LABELS"] = str(self.labels_dir)
+        
+        joint_model_path = self.test_path / "test_multichannel_joint_model.h5"
+        plot_path = self.test_path / "test_multichannel_joint_history.png"
+        metrics_json_path = self.test_path / "test_multichannel_joint_metrics.json"
+        
+        train_joint_cmd = [
+            sys.executable, "experiments/train_joint_model.py",
+            "--dataset-type", "seed_vig",
+            "--channels", "CP2", "C3", "C4",
+            "--predict-version", "v0",
+            "--classifier-version", "v1",
+            "--loss-alpha", "0.5",
+            "--lead-time-sec", "0.0",
+            "--forecast-steps", "1",
+            "--input-sec", "1.0",
+            "--stride-sec", "5.0",
+            "--epochs", "1",
+            "--batch-size", "4",
+            "--learning-rate", "0.01",
+            "--latent-dim", "16",
+            "--output-model", str(joint_model_path),
+            "--output-plot", str(plot_path),
+            "--metrics-json-path", str(metrics_json_path),
+            "--force-cpu"
+        ]
+        
+        res = subprocess.run(train_joint_cmd, capture_output=True, text=True, env=env)
+        if res.returncode != 0:
+            print("STDOUT:", res.stdout)
+            print("STDERR:", res.stderr)
+        self.assertEqual(res.returncode, 0)
+        self.assertTrue(joint_model_path.exists())
+        self.assertTrue(plot_path.exists())
+        self.assertTrue(metrics_json_path.exists())
+        
+        with open(metrics_json_path, "r") as mf:
+            metrics = json.load(mf)
+        self.assertEqual(metrics.get("num_channels"), 3)
+        self.assertEqual(metrics.get("channels"), ["CP2", "C3", "C4"])
+
 if __name__ == "__main__":
     unittest.main()

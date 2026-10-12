@@ -46,6 +46,30 @@ class SignalData:
                 f"Available channels: {self.channels}"
             )
             
+    def get_channels_signal(self, channel_names: list) -> np.ndarray:
+        """
+        Retrieve a 2D array of shape (num_samples, len(channel_names)) for the given list of channels.
+        
+        Args:
+            channel_names (list): List of channel names to retrieve.
+            
+        Returns:
+            np.ndarray: 2D array of shape (num_samples, len(channel_names))
+        """
+        channel_indices = []
+        norm_available = [c.upper() for c in self.channels]
+        for name in channel_names:
+            target = str(name).strip().upper()
+            if target in norm_available:
+                channel_indices.append(norm_available.index(target))
+            else:
+                raise ValueError(
+                    f"Channel '{name}' not found. "
+                    f"Available channels: {self.channels}"
+                )
+        return self.data[channel_indices, :].T
+
+            
     def get_channel_window(self, channel_name: str, start_min: float, end_min: float) -> np.ndarray:
         """
         Get a window of the signal for a specific channel between start_min and end_min (in minutes).

@@ -149,7 +149,8 @@ def main():
     )
     parser.add_argument("--config", type=str, default=None, help="Path to YAML configuration file")
     parser.add_argument("--dataset-type", type=str, choices=["seed_vig", "drozy"], help="Type of dataset (seed_vig or drozy)")
-    parser.add_argument("--channel", type=str, help="Channel name to train on (e.g. CP2, C3, Oz)")
+    parser.add_argument("--channel", type=str, default=None, help="Channel name to train on (e.g. CP2, C3, Oz)")
+    parser.add_argument("--channels", type=str, nargs="+", default=None, help="Channel names for multi-channel spatial fusion (e.g. CP2 POZ FT7 P2)")
     parser.add_argument("--predict-version", type=str, default="v0", help="Forecasting backbone architecture (v0=LSTM, v1=GRU)")
     parser.add_argument("--classifier-version", type=str, default="v0", help="Classification head architecture (v0=standard MLP, v1=BN-MLP)")
     parser.add_argument("--loss-alpha", type=float, default=0.5, help="Single trade-off alpha parameter in [0.0, 1.0]: Loss = alpha * Loss_clf + (1 - alpha) * Loss_forecast")
@@ -225,6 +226,14 @@ def main():
                     args.subjects = [int(v.strip()) for v in val.split(",") if v.strip()]
                 else:
                     args.subjects = val
+            elif norm_key in ["channel", "channels"]:
+                if isinstance(val, (list, tuple)):
+                    args.channels = [str(c) for c in val]
+                elif isinstance(val, str) and ("," in val or " " in val.strip()):
+                    delimiter = "," if "," in val else None
+                    args.channels = [c.strip() for c in val.split(delimiter) if c.strip()]
+                else:
+                    args.channel = str(val)
             elif norm_key in ["baseline_sec", "baseline_duration_sec"]:
                 args.baseline_sec = float(val)
             elif hasattr(args, norm_key):
@@ -252,8 +261,15 @@ def main():
         
     if not args.dataset_type:
         parser.error("--dataset-type is required (either via CLI or YAML config)")
-    if not args.channel:
-        parser.error("--channel is required (either via CLI or YAML config)")
+    if args.channels:
+        channels_list = [str(c).strip() for c in args.channels]
+        if not args.channel:
+            args.channel = "_".join(channels_list)
+    elif args.channel:
+        channels_list = [str(args.channel).strip()]
+    else:
+        parser.error("Either --channel or --channels is required (either via CLI or YAML config)")
+    num_channels = len(channels_list)
     if not (0.0 <= args.train_split <= 1.0):
         parser.error("--train-split must be between 0.0 and 1.0")
     if not (0.0 <= args.loss_alpha <= 1.0):
@@ -278,7 +294,8 @@ def main():
     
     logger.info("=" * 70)
     logger.info("--- JOINT MODEL (MULTI-TASK TRAINING: PREDICTION + CLASSIFICATION) ---")
-    logger.info(f"  - Dataset: {args.dataset_type.upper()} | Channel: {args.channel}")
+    channels_display = ", ".join(channels_list) if num_channels > 1 else channels_list[0]
+    logger.info(f"  - Dataset: {args.dataset_type.upper()} | Channels: [{channels_display}] ({num_channels}D Spatial Fusion)")
     logger.info(f"  - Architecture: Predictor {args.predict_version.upper()} + Classifier {args.classifier_version.upper()}")
     logger.info(f"  - Loss Balance Alpha: {args.loss_alpha:.3f} (Clf weight: {args.loss_alpha:.3f}, Forecast weight: {1.0-args.loss_alpha:.3f})")
     logger.info(f"  - Input Window: {input_len} samples ({args.input_sec:.2f} s)")
@@ -339,7 +356,10 @@ def main():
                     logger.info(f"Loading {partition_name} file: {f.name}...")
                     signal_data = SignalLoader.load_signal(str(f), args.dataset_type, resample_freq=args.resample_freq)
                     sfreq = signal_data.sfreq
-                    signal = signal_data.get_channel_signal(args.channel)
+                    if num_channels > 1:
+                        signal = signal_data.get_channels_signal(channels_list)
+                    else:
+                        signal = signal_data.get_channel_signal(channels_list[0])
                     
                     if args.dataset_type == "seed_vig":
                         perclos_file = config.SEED_VIG_LABELS / f.name
@@ -358,15 +378,27 @@ def main():
                     baseline_sec = float(getattr(args, "baseline_sec", 120.0))
                     if baseline_sec > 0.0 and len(signal) > int(baseline_sec * sfreq):
                         baseline_samples = int(baseline_sec * sfreq)
-                        mean = float(np.mean(signal[:baseline_samples]))
-                        std = float(np.std(signal[:baseline_samples]))
-                        if std <= 1e-6:
-                            std = float(np.std(signal)) or 1.0
-                        logger.info(f"  Applied Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s: mean={mean:.3f}, std={std:.3f})")
+                        if num_channels > 1:
+                            mean = np.mean(signal[:baseline_samples], axis=0, keepdims=True)
+                            std = np.std(signal[:baseline_samples], axis=0, keepdims=True)
+                            std_full = np.std(signal, axis=0, keepdims=True)
+                            std = np.where(std <= 1e-6, np.where(std_full <= 1e-6, 1.0, std_full), std)
+                            logger.info(f"  Applied Multichannel Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s)")
+                        else:
+                            mean = float(np.mean(signal[:baseline_samples]))
+                            std = float(np.std(signal[:baseline_samples]))
+                            if std <= 1e-6:
+                                std = float(np.std(signal)) or 1.0
+                            logger.info(f"  Applied Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s: mean={mean:.3f}, std={std:.3f})")
                     else:
-                        mean = float(np.mean(signal))
-                        std = float(np.std(signal))
-                    norm_sig = (signal - mean) / std if std > 0 else (signal - mean)
+                        if num_channels > 1:
+                            mean = np.mean(signal, axis=0, keepdims=True)
+                            std = np.std(signal, axis=0, keepdims=True)
+                            std = np.where(std <= 1e-6, 1.0, std)
+                        else:
+                            mean = float(np.mean(signal))
+                            std = float(np.std(signal))
+                    norm_sig = (signal - mean) / std if (num_channels > 1 or std > 0) else (signal - mean)
                     
                     sig_idx = len(normalized_signals)
                     normalized_signals.append(norm_sig)
@@ -375,9 +407,14 @@ def main():
                     i = 0
                     while i + total_window_span <= num_samples:
                         # Forecast target
-                        y_forecast = norm_sig[i + input_len : i + input_len + forecast_steps]
-                        if forecast_steps == 1:
-                            y_forecast = y_forecast[0]
+                        if num_channels > 1:
+                            y_forecast = norm_sig[i + input_len : i + input_len + forecast_steps, :]
+                            if forecast_steps == 1:
+                                y_forecast = y_forecast[0]
+                        else:
+                            y_forecast = norm_sig[i + input_len : i + input_len + forecast_steps]
+                            if forecast_steps == 1:
+                                y_forecast = y_forecast[0]
                             
                         # Classification target
                         if args.dataset_type == "seed_vig":
@@ -413,7 +450,10 @@ def main():
                 signal_data = SignalLoader.load_signal(str(f), args.dataset_type, resample_freq=args.resample_freq)
                 if sfreq is None:
                     sfreq = signal_data.sfreq
-                signal = signal_data.get_channel_signal(args.channel)
+                if num_channels > 1:
+                    signal = signal_data.get_channels_signal(channels_list)
+                else:
+                    signal = signal_data.get_channel_signal(channels_list[0])
                 
                 if args.dataset_type == "seed_vig":
                     perclos_file = config.SEED_VIG_LABELS / f.name
@@ -446,27 +486,49 @@ def main():
                 baseline_sec = float(getattr(args, "baseline_sec", 120.0))
                 if baseline_sec > 0.0 and len(signal) > int(baseline_sec * sfreq):
                     baseline_samples = int(baseline_sec * sfreq)
-                    mean = float(np.mean(signal[:baseline_samples]))
-                    std = float(np.std(signal[:baseline_samples]))
-                    if std <= 1e-6:
-                        std = float(np.std(signal)) or 1.0
-                    logger.info(f"  Applied Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s: mean={mean:.3f}, std={std:.3f})")
+                    if num_channels > 1:
+                        mean = np.mean(signal[:baseline_samples], axis=0, keepdims=True)
+                        std = np.std(signal[:baseline_samples], axis=0, keepdims=True)
+                        std_full = np.std(signal, axis=0, keepdims=True)
+                        std = np.where(std <= 1e-6, np.where(std_full <= 1e-6, 1.0, std_full), std)
+                        logger.info(f"  Applied Multichannel Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s)")
+                    else:
+                        mean = float(np.mean(signal[:baseline_samples]))
+                        std = float(np.std(signal[:baseline_samples]))
+                        if std <= 1e-6:
+                            std = float(np.std(signal)) or 1.0
+                        logger.info(f"  Applied Baseline Calibration Z-Score ({f.name}, first {baseline_sec:.1f}s: mean={mean:.3f}, std={std:.3f})")
                 elif n_train > 0:
                     train_portion = signal[:(n_train - 1) * stride + total_window_span]
-                    mean = np.mean(train_portion)
-                    std = np.std(train_portion)
+                    if num_channels > 1:
+                        mean = np.mean(train_portion, axis=0, keepdims=True)
+                        std = np.std(train_portion, axis=0, keepdims=True)
+                        std = np.where(std <= 1e-6, 1.0, std)
+                    else:
+                        mean = np.mean(train_portion)
+                        std = np.std(train_portion)
                 else:
-                    mean = np.mean(signal)
-                    std = np.std(signal)
+                    if num_channels > 1:
+                        mean = np.mean(signal, axis=0, keepdims=True)
+                        std = np.std(signal, axis=0, keepdims=True)
+                        std = np.where(std <= 1e-6, 1.0, std)
+                    else:
+                        mean = np.mean(signal)
+                        std = np.std(signal)
                     
-                norm_sig = (signal - mean) / std if std > 0 else (signal - mean)
+                norm_sig = (signal - mean) / std if (num_channels > 1 or std > 0) else (signal - mean)
                 normalized_signals.append(norm_sig)
                 
                 # Train partition
                 for start_idx in file_indices[:n_train]:
-                    y_f = norm_sig[start_idx + input_len : start_idx + input_len + forecast_steps]
-                    if forecast_steps == 1:
-                        y_f = y_f[0]
+                    if num_channels > 1:
+                        y_f = norm_sig[start_idx + input_len : start_idx + input_len + forecast_steps, :]
+                        if forecast_steps == 1:
+                            y_f = y_f[0]
+                    else:
+                        y_f = norm_sig[start_idx + input_len : start_idx + input_len + forecast_steps]
+                        if forecast_steps == 1:
+                            y_f = y_f[0]
                     if args.dataset_type == "seed_vig":
                         t_sec = (start_idx + input_len + lead_time_samples) / sfreq
                         t_ep = min(len(loaded_labels[sig_idx]) - 1, max(0, int(t_sec / 8.0)))
@@ -479,9 +541,14 @@ def main():
                 val_start = n_train + neglected
                 if val_start < n_pairs:
                     for start_idx in file_indices[val_start:]:
-                        y_f = norm_sig[start_idx + input_len : start_idx + input_len + forecast_steps]
-                        if forecast_steps == 1:
-                            y_f = y_f[0]
+                        if num_channels > 1:
+                            y_f = norm_sig[start_idx + input_len : start_idx + input_len + forecast_steps, :]
+                            if forecast_steps == 1:
+                                y_f = y_f[0]
+                        else:
+                            y_f = norm_sig[start_idx + input_len : start_idx + input_len + forecast_steps]
+                            if forecast_steps == 1:
+                                y_f = y_f[0]
                         if args.dataset_type == "seed_vig":
                             t_sec = (start_idx + input_len + lead_time_samples) / sfreq
                             t_ep = min(len(loaded_labels[sig_idx]) - 1, max(0, int(t_sec / 8.0)))
@@ -519,6 +586,7 @@ def main():
     # Build Joint Model using unified flexible builder
     joint_params = {
         "input_len": input_len,
+        "num_channels": num_channels,
         "forecast_steps": forecast_steps,
         "latent_dim": args.latent_dim,
         "loss_alpha": args.loss_alpha,
@@ -559,6 +627,8 @@ def main():
         "n_val_samples": len(val_indices),
         "validation_subject": val_subj_list[0] if val_subj_list else None,
         "is_loso": is_loso_mode,
+        "num_channels": num_channels,
+        "channels": channels_list,
         "loss_alpha": args.loss_alpha,
         "predict_version": args.predict_version,
         "classifier_version": args.classifier_version,
@@ -590,7 +660,8 @@ def main():
         else:
             plot_file = out_path.with_suffix(".png")
         try:
-            plot_title = f"Joint Model ({args.predict_version.upper()}+{args.classifier_version.upper()}) | α={args.loss_alpha:.2f} | {args.dataset_type.upper()} ({args.channel})"
+            channels_str = "+".join(channels_list) if num_channels > 1 else channels_list[0]
+            plot_title = f"Joint Model ({args.predict_version.upper()}+{args.classifier_version.upper()}) | α={args.loss_alpha:.2f} | {args.dataset_type.upper()} ({channels_str})"
             plot_joint_training_history(history, plot_file, title_prefix=plot_title)
         except Exception as pe:
             logger.error(f"Failed to generate joint training plot: {pe}")

@@ -68,13 +68,15 @@ def create_joint_model(
     d1 = parameters.get("dropout_1", 0.3)
     d2 = parameters.get("dropout_2", 0.2)
     
+    num_channels = int(parameters.get("num_channels", 1))
+    
     logger.info(
         f"Building Joint Model [Predictor: {p_ver.upper()} | Classifier: {c_ver.upper()}] "
-        f"(input_len={input_len}, latent_dim={latent_dim}, forecast_steps={forecast_steps}, alpha={alpha:.3f}, lr={lr})..."
+        f"(input_len={input_len}, num_channels={num_channels}, latent_dim={latent_dim}, forecast_steps={forecast_steps}, alpha={alpha:.3f}, lr={lr})..."
     )
     
-    # 1. Shared Input Layer
-    inp = tf.keras.layers.Input(shape=(input_len, 1), name="signal_input")
+    # 1. Shared Input Layer (Multi-Channel Spatial-Temporal Window)
+    inp = tf.keras.layers.Input(shape=(input_len, num_channels), name="signal_input")
     
     # 2. Shared Recurrent Backbone (Initialized from scratch with random weights)
     if p_ver == "v1" or "gru" in p_ver:
@@ -96,22 +98,24 @@ def create_joint_model(
         
     latent_state = recurrent_layer(inp) # Shape: (batch, latent_dim)
     
-    # 3. Branch 1: Forecasting Output Head (Linear voltage prediction)
+    # 3. Branch 1: Forecasting Output Head (Linear voltage prediction across all channels)
     if forecast_steps == 1:
         forecast_output = tf.keras.layers.Dense(
-            1,
+            num_channels,
             activation="linear",
             kernel_initializer="glorot_uniform",
             name="forecast_output"
         )(latent_state)
     else:
         forecast_dense = tf.keras.layers.Dense(
-            forecast_steps,
+            forecast_steps * num_channels,
             activation="linear",
             kernel_initializer="glorot_uniform",
             name="forecast_dense"
         )(latent_state)
-        forecast_output = tf.keras.layers.Reshape((forecast_steps,), name="forecast_output")(forecast_dense)
+        target_shape = (forecast_steps, num_channels) if num_channels > 1 else (forecast_steps,)
+        forecast_output = tf.keras.layers.Reshape(target_shape, name="forecast_output")(forecast_dense)
+
         
     # 4. Branch 2: Classification Output Head (Vigilance / Drowsiness probability)
     clf_x = latent_state

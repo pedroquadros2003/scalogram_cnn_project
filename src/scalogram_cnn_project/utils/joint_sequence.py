@@ -37,6 +37,12 @@ class JointSequence(tf.keras.utils.Sequence):
         self.batch_size = int(batch_size)
         self.shuffle = bool(shuffle)
         
+        # Determine num_channels from loaded signals
+        if len(self.loaded_signals) > 0 and self.loaded_signals[0].ndim > 1:
+            self.num_channels = int(self.loaded_signals[0].shape[1])
+        else:
+            self.num_channels = 1
+        
         self.indexes = np.arange(len(self.indices_with_dual_labels))
         if self.shuffle:
             np.random.shuffle(self.indexes)
@@ -48,8 +54,13 @@ class JointSequence(tf.keras.utils.Sequence):
         batch_indexes = self.indexes[index * self.batch_size : (index + 1) * self.batch_size]
         b_size = len(batch_indexes)
         
-        batch_x = np.zeros((b_size, self.input_len, 1), dtype=np.float32)
-        batch_y_forecast = np.zeros((b_size, self.forecast_steps), dtype=np.float32)
+        batch_x = np.zeros((b_size, self.input_len, self.num_channels), dtype=np.float32)
+        if self.forecast_steps == 1 and self.num_channels > 1:
+            batch_y_forecast = np.zeros((b_size, self.num_channels), dtype=np.float32)
+        elif self.forecast_steps > 1 and self.num_channels > 1:
+            batch_y_forecast = np.zeros((b_size, self.forecast_steps, self.num_channels), dtype=np.float32)
+        else:
+            batch_y_forecast = np.zeros((b_size, self.forecast_steps), dtype=np.float32)
         batch_y_clf = np.zeros((b_size, 1), dtype=np.float32)
         
         for i, item_idx in enumerate(batch_indexes):
@@ -57,11 +68,18 @@ class JointSequence(tf.keras.utils.Sequence):
             sig = self.loaded_signals[sig_idx]
             
             # Extract input window
-            batch_x[i, :, 0] = sig[start_idx : start_idx + self.input_len]
+            if self.num_channels == 1:
+                batch_x[i, :, 0] = sig[start_idx : start_idx + self.input_len].squeeze()
+            else:
+                batch_x[i, :, :] = sig[start_idx : start_idx + self.input_len, :]
             
             # Set forecast target
-            if np.isscalar(y_forecast) or (isinstance(y_forecast, (np.ndarray, list)) and len(y_forecast) == 1):
+            if self.forecast_steps == 1 and self.num_channels == 1:
                 batch_y_forecast[i, 0] = float(np.squeeze(y_forecast))
+            elif self.forecast_steps == 1 and self.num_channels > 1:
+                batch_y_forecast[i, :] = np.asarray(y_forecast, dtype=np.float32).squeeze()
+            elif self.forecast_steps > 1 and self.num_channels > 1:
+                batch_y_forecast[i] = np.asarray(y_forecast, dtype=np.float32)
             else:
                 batch_y_forecast[i, :] = np.asarray(y_forecast, dtype=np.float32)
                 
@@ -72,6 +90,7 @@ class JointSequence(tf.keras.utils.Sequence):
             "forecast_output": batch_y_forecast,
             "classification_output": batch_y_clf
         }
+
 
     def on_epoch_end(self):
         if self.shuffle:
