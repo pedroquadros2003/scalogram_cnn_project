@@ -1,0 +1,120 @@
+# ==============================================================================
+# Joint Multi-Task Grid Search: Clean 4D Spatial EEG Fusion (PZ Sagittal Midline)
+# Validation Strategy: Leave-One-Subject-Out (LOSO) Cross-Validation
+#
+# Multi-Channel Spatial Configuration (Clean 4D Montage):
+#   Channels: ['CP2', 'PZ', 'FT7', 'P2']
+#     - CP2: Centro-parietal right (sensorimotor control & motor readiness)
+#     - PZ:  Parietal Midline / Sagital Vertex (midline attention, safe from headrest contact)
+#     - FT7: Fronto-temporal left (anterior blink dynamics & frontal theta)
+#     - P2:  Parietal right (spatial parietal dynamics & attentional allocation)
+#
+# Note on SEED-VIG Montage:
+#   The SEED-VIG dataset records 17 channels without Cz/C4. PZ is the direct sagittal
+#   midline electrode, elevated above the headrest plane (unlike POz/Oz), completely
+#   avoiding the +9,600 uV popping artifacts observed on S18.
+#
+# Individual Baseline Calibration:
+#   baseline_sec: 120.0s (First 2 minutes of resting state Z-score per channel)
+#
+# Cleanest Top-5 Subjects:
+#   [2, 4, 5, 14, 18]
+#
+# RUNTIME BUDGET:
+#   - Total Candidates: 12 combinations (2 Backbones * 2 Alphas * 3 Lead Times)
+#   - Folds per Candidate: 5 LOSO folds (15 epochs each)
+#   - Batch Size: 64 (GPU tensor throughput on RTX 2050)
+#   - Estimated Total Time: ~6.5 to 7.5 hours
+# ==============================================================================
+
+MODEL_HYPER_PARAMS:
+
+  predict_version:
+    mode: "choice"
+    values: ["v0", "v1"]              # LSTM (v0) vs GRU (v1)
+
+  classifier_version:
+    mode: "fixed"
+    values: ["v1"]                    # BN-MLP coupled head
+
+  loss_alpha:
+    mode: "choice"
+    values: [0.5, 0.7]                # Balanced (0.5) vs Classification-Prioritized (0.7)
+
+  latent_dim:
+    mode: "fixed"
+    values: [32]
+
+  learning_rate:
+    mode: "fixed"
+    values: [0.001]
+
+  hidden_units_1:
+    mode: "fixed"
+    values: [64]
+
+  hidden_units_2:
+    mode: "fixed"
+    values: [32]
+
+  dropout_1:
+    mode: "fixed"
+    values: [0.3]
+
+  dropout_2:
+    mode: "fixed"
+    values: [0.2]
+
+  optimizer_name:
+    mode: "fixed"
+    values: ["adam"]
+
+MODEL_TRAIN_PARAMS:
+  dataset_type:
+    mode: "fixed"
+    values: ["seed_vig"]
+
+  # Clean 4D Spatial Fusion: PZ substituted for POZ
+  channels:
+    mode: "fixed"
+    values:
+      - ["CP2", "PZ", "FT7", "P2"]
+
+  lead_time_sec:
+    mode: "choice"
+    values: [0.0, 5.0, 30.0]          # Immediate vs 5s vs 30s anticipation
+
+  forecast_steps:
+    mode: "fixed"
+    values: [1]
+
+  input_sec:
+    mode: "fixed"
+    values: [1.0]
+
+  stride_sec:
+    mode: "fixed"
+    values: [5.0]
+
+  epochs:
+    mode: "fixed"
+    values: [15]
+
+  batch_size:
+    mode: "fixed"
+    values: [64]
+
+  drowsiness_threshold:
+    mode: "fixed"
+    values: [0.5]
+
+  # Individual Z-score calibration over initial 120s of resting state
+  baseline_sec:
+    mode: "fixed"
+    values: [120.0]
+
+  # Top-5 cleanest subjects in SEED-VIG
+  subjects:
+    mode: "fixed"
+    values:
+      - [2, 4, 5, 14, 18]
