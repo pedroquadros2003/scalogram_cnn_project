@@ -57,6 +57,7 @@ def create_joint_model(
     latent_dim = parameters.get("latent_dim", 32)
     alpha = float(parameters.get("loss_alpha", 0.5))
     alpha = max(0.0, min(1.0, alpha)) # Clip to [0.0, 1.0]
+    loss_k = float(parameters.get("loss_k", 10.0))
     
     lr = float(parameters.get("learning_rate", 0.001))
     opt_name = str(parameters.get("optimizer_name", "adam")).lower()
@@ -72,7 +73,7 @@ def create_joint_model(
     
     logger.info(
         f"Building Joint Model [Predictor: {p_ver.upper()} | Classifier: {c_ver.upper()}] "
-        f"(input_len={input_len}, num_channels={num_channels}, latent_dim={latent_dim}, forecast_steps={forecast_steps}, alpha={alpha:.3f}, lr={lr})..."
+        f"(input_len={input_len}, num_channels={num_channels}, latent_dim={latent_dim}, forecast_steps={forecast_steps}, alpha={alpha:.3f}, loss_k={loss_k:.1f}, lr={lr})..."
     )
     
     # 1. Shared Input Layer (Multi-Channel Spatial-Temporal Window)
@@ -155,10 +156,10 @@ def create_joint_model(
         name=f"joint_model_{p_ver}_{c_ver}"
     )
     
-    # 6. Compile Model with Single Balanced alpha Weighting
-    # Loss_total = alpha * Loss_clf + (1 - alpha) * Loss_forecast
+    # 6. Compile Model with Balanced alpha and Magnitude Scaling Factor k
+    # Loss_total = alpha * (loss_k * Loss_clf) + (1 - alpha) * Loss_forecast
     loss_weights = {
-        "classification_output": alpha,
+        "classification_output": alpha * loss_k,
         "forecast_output": 1.0 - alpha
     }
     

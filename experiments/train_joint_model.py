@@ -153,7 +153,8 @@ def main():
     parser.add_argument("--channels", type=str, nargs="+", default=None, help="Channel names for multi-channel spatial fusion (e.g. CP2 POZ FT7 P2)")
     parser.add_argument("--predict-version", type=str, default="v0", help="Forecasting backbone architecture (v0=LSTM, v1=GRU)")
     parser.add_argument("--classifier-version", type=str, default="v0", help="Classification head architecture (v0=standard MLP, v1=BN-MLP)")
-    parser.add_argument("--loss-alpha", type=float, default=0.5, help="Single trade-off alpha parameter in [0.0, 1.0]: Loss = alpha * Loss_clf + (1 - alpha) * Loss_forecast")
+    parser.add_argument("--loss-alpha", type=float, default=0.5, help="Single trade-off alpha parameter in [0.0, 1.0]: Loss = alpha * k * Loss_clf + (1 - alpha) * Loss_forecast")
+    parser.add_argument("--loss-k", type=float, default=10.0, help="Magnitude multiplier k on classification loss to equalize orders of magnitude with MSE forecast loss")
     parser.add_argument("--lead-time-sec", type=float, default=0.0, help="Anticipation lead time X in seconds (target vigilance state at t + lead_time_sec)")
     parser.add_argument("--forecast-steps", type=int, default=1, help="Number of future voltage time steps to forecast (default: 1 step = 10 ms)")
     parser.add_argument("--input-sec", type=float, default=1.0, help="Input signal window duration in seconds (default: 1.0 s)")
@@ -236,6 +237,8 @@ def main():
                     args.channel = str(val)
             elif norm_key in ["baseline_sec", "baseline_duration_sec"]:
                 args.baseline_sec = float(val)
+            elif norm_key in ["loss_k", "k", "loss_multiplier_k"]:
+                args.loss_k = float(val)
             elif hasattr(args, norm_key):
                 setattr(args, norm_key, val)
                 
@@ -297,7 +300,9 @@ def main():
     channels_display = ", ".join(channels_list) if num_channels > 1 else channels_list[0]
     logger.info(f"  - Dataset: {args.dataset_type.upper()} | Channels: [{channels_display}] ({num_channels}D Spatial Fusion)")
     logger.info(f"  - Architecture: Predictor {args.predict_version.upper()} + Classifier {args.classifier_version.upper()}")
-    logger.info(f"  - Loss Balance Alpha: {args.loss_alpha:.3f} (Clf weight: {args.loss_alpha:.3f}, Forecast weight: {1.0-args.loss_alpha:.3f})")
+    clf_weight = args.loss_alpha * args.loss_k
+    f_weight = 1.0 - args.loss_alpha
+    logger.info(f"  - Loss Balance Alpha: {args.loss_alpha:.3f} | Multiplier k: {args.loss_k:.1f} (Clf weight: {clf_weight:.3f}, Forecast weight: {f_weight:.3f})")
     logger.info(f"  - Input Window: {input_len} samples ({args.input_sec:.2f} s)")
     logger.info(f"  - Forecast Steps: {forecast_steps} sample(s) ({forecast_steps/args.resample_freq*1000.0:.1f} ms)")
     logger.info(f"  - Lead Time (Anticipation): {lead_time_samples} samples ({args.lead_time_sec:.2f} s ahead)")
@@ -590,6 +595,7 @@ def main():
         "forecast_steps": forecast_steps,
         "latent_dim": args.latent_dim,
         "loss_alpha": args.loss_alpha,
+        "loss_k": args.loss_k,
         "learning_rate": args.learning_rate,
         "optimizer_name": args.optimizer_name,
     }
@@ -630,6 +636,7 @@ def main():
         "num_channels": num_channels,
         "channels": channels_list,
         "loss_alpha": args.loss_alpha,
+        "loss_k": args.loss_k,
         "predict_version": args.predict_version,
         "classifier_version": args.classifier_version,
         "forecast_steps": args.forecast_steps,

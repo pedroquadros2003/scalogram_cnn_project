@@ -34,6 +34,10 @@ MODEL_HYPER_PARAMS:
     mode: "choice"
     values: [0.5, 0.7]
 
+  loss_k:
+    mode: "fixed"
+    values: [10.0]                    # Scaling factor multiplier k to equalize BCE and MSE magnitudes
+
   latent_dim:
     mode: "fixed"
     values: [32]
