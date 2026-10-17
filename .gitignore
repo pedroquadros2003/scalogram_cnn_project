@@ -61,6 +61,8 @@ configs/hyperparameter_search_rnn/*
 !configs/hyperparameter_search_rnn/joint_gridsearch_loso_multichannel.yaml
 !configs/hyperparameter_search_rnn/joint_gridsearch_loso_multichannel_pz.yaml
 !configs/hyperparameter_search_rnn/joint_gridsearch_loso_multichannel_cp1.yaml
+!configs/hyperparameter_search_rnn/joint_gridsearch_loso_cp2_k10.yaml
+!configs/hyperparameter_search_rnn/joint_gridsearch_loso_4ch_pz_k10.yaml
 
 
 

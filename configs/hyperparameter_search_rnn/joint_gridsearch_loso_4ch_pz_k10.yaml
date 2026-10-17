@@ -1,0 +1,116 @@
+# ==============================================================================
+# Joint Multi-Task Grid Search: Clean 4D Spatial Fusion (PZ) + Magnitude Multiplier k=10
+# Validation Strategy: Leave-One-Subject-Out (LOSO) Cross-Validation
+#
+# Multi-Channel Spatial Configuration (Clean 4D Montage):
+#   Channels: ['CP2', 'PZ', 'FT7', 'P2']
+#     - CP2: Centro-parietal right (sensorimotor control & motor readiness)
+#     - PZ:  Parietal Midline / Sagital Vertex (midline attention, safe from headrest contact)
+#     - FT7: Fronto-temporal left (anterior blink dynamics & frontal theta)
+#     - P2:  Parietal right (spatial parietal dynamics & attentional allocation)
+#
+# Loss Formulation: L_total = alpha * (k * L_clf) + (1 - alpha) * L_forecast
+#   k = 10.0 equalizes BCE (~0.65) with 4-channel MSE (~6.5) for true gradient balance.
+#
+# RUNTIME BUDGET ESTIMATE:
+#   - Total Candidates: 12 combinations (2 Backbones * 2 Alphas * 3 Lead Times)
+#   - Folds per Candidate: 5 LOSO folds (15 epochs each)
+#   - Batch Size: 64 (GPU tensor throughput on RTX 2050)
+#   - TOTAL ESTIMATED RUNTIME: ~5.0 to 6.0 hours (Strictly under 10-hour limit)
+# ==============================================================================
+
+MODEL_HYPER_PARAMS:
+
+  predict_version:
+    mode: "choice"
+    values: ["v0", "v1"]              # LSTM (v0) vs GRU (v1)
+
+  classifier_version:
+    mode: "fixed"
+    values: ["v1"]                    # BN-MLP coupled head
+
+  loss_alpha:
+    mode: "choice"
+    values: [0.5, 0.7]                # Balanced (0.5) vs Classification-Prioritized (0.7)
+
+  loss_k:
+    mode: "fixed"
+    values: [10.0]                    # Scaling factor multiplier k to equalize BCE and MSE magnitudes
+
+  latent_dim:
+    mode: "fixed"
+    values: [32]
+
+  learning_rate:
+    mode: "fixed"
+    values: [0.001]
+
+  hidden_units_1:
+    mode: "fixed"
+    values: [64]
+
+  hidden_units_2:
+    mode: "fixed"
+    values: [32]
+
+  dropout_1:
+    mode: "fixed"
+    values: [0.3]
+
+  dropout_2:
+    mode: "fixed"
+    values: [0.2]
+
+  optimizer_name:
+    mode: "fixed"
+    values: ["adam"]
+
+MODEL_TRAIN_PARAMS:
+  dataset_type:
+    mode: "fixed"
+    values: ["seed_vig"]
+
+  # Clean 4D Spatial Fusion
+  channels:
+    mode: "fixed"
+    values:
+      - ["CP2", "PZ", "FT7", "P2"]
+
+  lead_time_sec:
+    mode: "choice"
+    values: [0.0, 5.0, 30.0]          # Immediate vs 5s vs 30s anticipation
+
+  forecast_steps:
+    mode: "fixed"
+    values: [1]
+
+  input_sec:
+    mode: "fixed"
+    values: [1.0]
+
+  stride_sec:
+    mode: "fixed"
+    values: [5.0]
+
+  epochs:
+    mode: "fixed"
+    values: [15]
+
+  batch_size:
+    mode: "fixed"
+    values: [64]
+
+  drowsiness_threshold:
+    mode: "fixed"
+    values: [0.5]
+
+  # Individual Z-score calibration over initial 120s of resting state
+  baseline_sec:
+    mode: "fixed"
+    values: [120.0]
+
+  # Top-5 cleanest subjects in SEED-VIG
+  subjects:
+    mode: "fixed"
+    values:
+      - [2, 4, 5, 14, 18]

@@ -1218,28 +1218,44 @@ Instead of isolating the feature extraction backbone solely for classification (
      └─────────┬─────────┘                 └─────────────┬─────────────┘
                │                                         │
                ▼                                         ▼
-     ŷ_forecast ∈ ℝ^(1)                        ŷ_clf ∈ [0.0, 1.0]
+     ŷ_forecast ∈ ℝ^(C)                        ŷ_clf ∈ [0.0, 1.0]
      (Loss: MSE)                               (Loss: BCE)
                │                                         │
                └─────────────────┬───────────────────────┘
                                  │
                                  ▼
-                     ┌───────────────────────┐
-                     │ Combined Total Loss   │
-                     │ L_total = α·L_clf +   │
-                     │          (1-α)·L_pred │
-                     └───────────────────────┘
+                     ┌───────────────────────────┐
+                     │    Combined Total Loss    │
+                     │ L_total = α·(k·L_clf) +   │
+                     │          (1-α)·L_pred     │
+                     └───────────────────────────┘
 ```
 
 ### Key Design Principles:
-1. **Single Loss Balance Parameter ($\alpha \in [0.0, 1.0]$):**
-   $$\mathcal{L}_{\text{total}} = \alpha \cdot \mathcal{L}_{\text{classification}} + (1 - \alpha) \cdot \mathcal{L}_{\text{forecasting}}$$
-   - $\alpha = 1.0$: Pure classification mode.
-   - $\alpha = 0.0$: Pure forecasting mode.
-   - $\alpha = 0.5$: Balanced multi-task learning.
-2. **Zero Data Leakage (Strict Random Initialization):**
+1. **Loss Balancing with Magnitude Equalization Multiplier ($k = 10.0$ and $\alpha \in [0.0, 1.0]$):**
+   $$\mathcal{L}_{\text{total}} = \alpha \cdot \left(k \cdot \mathcal{L}_{\text{classification}}\right) + (1 - \alpha) \cdot \mathcal{L}_{\text{forecasting}}$$
+   
+   - **The Magnitude Imbalance Problem:** In physiological EEG time-series, the Binary Cross-Entropy classification loss ($\mathcal{L}_{\text{clf}}$) naturally hovers between $\sim 0.60$ and $0.70$. Conversely, the Mean Squared Error signal forecasting loss ($\mathcal{L}_{\text{forecast}}$) across raw/standardized EEG channels hovers around $\approx 6.0$ to $7.0$. Without scaling, the forecasting task is an order of magnitude larger ($10\times$), monopolizing backpropagation gradients and driving the recurrent backbone almost exclusively toward waveform autoregression, rendering the classification performance sub-optimal.
+   - **Equalization Multiplier ($k = 10.0$):** Multiplying $\mathcal{L}_{\text{clf}}$ by $k = 10.0$ scales the classification loss to $\approx 6.5$, putting both loss components on identical numerical footing ($10 \times 0.65 \approx 6.5 \approx \mathcal{L}_{\text{forecast}}$).
+   - **Precise Role of $\alpha$:** With magnitudes aligned, $\alpha$ acts as an exact gradient allocation slider:
+     - $\alpha = 0.5$: True 50/50 gradient balance between drowsiness detection and signal forecasting.
+     - $\alpha = 0.7$: Classification-prioritized mode, dedicating $70\%$ of gradient priority to drowsiness detection while retaining $30\%$ forecasting as an inductive regularizer.
+     - $\alpha = 1.0$: Pure classification mode ($0\%$ forecasting influence).
+     - $\alpha = 0.0$: Pure forecasting mode ($0\%$ classification influence).
+     - **Rule of Thumb:** Higher $\alpha \implies$ higher weight and influence on classification.
+
+2. **Single-Channel and Multi-Channel Spatial EEG Fusion:**
+   - **Single-Channel:** Focuses on high-information electrodes such as `CP2` (centro-parietal right, key for motor readiness and drowsiness transitions).
+   - **Clean 4D Spatial Montage (`['CP2', 'PZ', 'FT7', 'P2']`):** Combines spatial signals across distinct neural networks:
+     - `CP2`: Centro-parietal right (sensorimotor control & motor readiness).
+     - `PZ`: Parietal Midline / Sagittal Vertex (midline attention, safe from vehicle seat headrest friction artifacts).
+     - `FT7`: Fronto-temporal left (anterior blink dynamics & frontal theta rhythms).
+     - `P2`: Parietal right (visuospatial attentional allocation).
+
+3. **Zero Data Leakage (Strict Random Initialization):**
    All layers across the shared backbone, forecasting head, and classification head are initialized from scratch with Glorot uniform weights (`glorot_uniform`). No pre-trained weights are imported.
-3. **Flexible Component Pairing:**
+
+4. **Flexible Component Pairing:**
    Supports any combination of forecasting backbone (`v0` LSTM, `v1` GRU) and classification head (`v0` standard MLP, `v1` Batch-Normalized MLP).
 
 ---
@@ -1251,15 +1267,16 @@ Train a joint multi-task model using either a YAML configuration file or direct 
 ### Configuration Template (`configs/model_training_joint/seedvig_joint_example.yaml`)
 ```yaml
 dataset_type: "seed_vig"      # "seed_vig" or "drozy"
-channel: "CP2"
+channel: "CP2"                # or channels: ["CP2", "PZ", "FT7", "P2"]
 predict_version: "v0"         # "v0" (LSTM) or "v1" (GRU)
 classifier_version: "v1"      # "v0" (Standard MLP) or "v1" (BN-MLP)
 
-# Multi-Task Balance
-loss_alpha: 0.5               # alpha in [0.0, 1.0]
+# Multi-Task Balance & Loss Equalization
+loss_alpha: 0.5               # alpha in [0.0, 1.0] (higher = more classification weight)
+loss_k: 10.0                  # k multiplier to equalize BCE (~0.65) and MSE (~6.5)
 
 # Signal & Window Parameters
-lead_time_sec: 0.0            # 0.0 for immediate prediction
+lead_time_sec: 0.0            # 0.0 for immediate prediction, 5.0/30.0 for anticipatory
 forecast_steps: 1             # Number of future steps to forecast
 input_sec: 1.0                # Past window duration (1.0s = 100 samples at 100 Hz)
 stride_sec: 5.0               # Stride for epoch windowing
@@ -1269,7 +1286,7 @@ train_ratio: 0.8              # Temporal train/val split (when not using LOSO)
 latent_dim: 32                # Shared recurrent units
 learning_rate: 0.001
 epochs: 15
-batch_size: 32
+batch_size: 64
 save_plot: true
 ```
 
@@ -1291,22 +1308,26 @@ save_plot: true
       --channel CP2 \
       --predict-version v0 \
       --classifier-version v1 \
-      --loss-alpha 0.6 \
+      --loss-alpha 0.7 \
+      --loss-k 10.0 \
       --latent-dim 32 \
-      --epochs 20 \
-      --batch-size 32 \
+      --epochs 15 \
+      --batch-size 64 \
       --learning-rate 0.001 \
       --output-model outputs/joint_model_custom.h5 \
       --output-plot outputs/joint_history_custom.png
   ```
 
-* **Train Single Fold in Leave-One-Subject-Out (LOSO) Mode**:
+* **Train Single Fold in Leave-One-Subject-Out (LOSO) Mode with Baseline Z-Score**:
   ```bash
   python3 experiments/train_joint_model.py \
       --config configs/model_training_joint/seedvig_joint_example.yaml \
-      --validation-subject 1 \
-      --output-model outputs/joint_model_loso_s01.h5 \
-      --output-plot outputs/joint_history_loso_s01.png
+      --validation-subject 2 \
+      --baseline-sec 120.0 \
+      --loss-alpha 0.7 \
+      --loss-k 10.0 \
+      --output-model outputs/joint_model_loso_s02.h5 \
+      --output-plot outputs/joint_history_loso_s02.png
   ```
 
 ---
@@ -1317,7 +1338,7 @@ The script automatically generates a publication-ready 3-panel comparative diagn
 
 1. **Panel 1: Loss Dynamics & Task Balance**:
    - Total Loss ($\mathcal{L}_{\text{total}}$): Train vs. Val
-   - Weighted Classification Loss ($\alpha \cdot \mathcal{L}_{\text{clf}}$)
+   - Weighted Classification Loss ($\alpha \cdot k \cdot \mathcal{L}_{\text{clf}}$)
    - Weighted Forecasting Loss ($(1 - \alpha) \cdot \mathcal{L}_{\text{forecast}}$)
 2. **Panel 2: Classification Performance**:
    - Accuracy ($\%$) on Train and Validation sets.
@@ -1357,6 +1378,24 @@ Normalizes raw signals by computing mean and standard deviation solely over the 
 python3 experiments/run_joint_gridsearch.py \
     --config configs/hyperparameter_search_rnn/joint_gridsearch_loso_top5_baseline.yaml \
     --output-folder joint_gridsearch_loso_top5_baseline
+```
+
+### D. Single-Channel CP2 with Loss Multiplier $k=10$ (`configs/hyperparameter_search_rnn/joint_gridsearch_loso_cp2_k10.yaml`)
+Focuses on electrode `CP2` (centro-parietal right) across the Top-5 balanced subjects (`[2, 4, 5, 14, 18]`) with 120s baseline Z-score calibration, evaluating the impact of loss magnitude equalization ($k = 10.0$) across backbones (LSTM vs GRU), $\alpha \in \{0.5, 0.7\}$, and lead times $\{0.0\text{s}, 5.0\text{s}, 30.0\text{s}\}$:
+
+```bash
+python3 experiments/run_joint_gridsearch.py \
+    --config configs/hyperparameter_search_rnn/joint_gridsearch_loso_cp2_k10.yaml \
+    --output-folder joint_gridsearch_loso_cp2_k10
+```
+
+### E. Clean 4D Spatial Montage with Loss Multiplier $k=10$ (`configs/hyperparameter_search_rnn/joint_gridsearch_loso_4ch_pz_k10.yaml`)
+Executes 4-channel spatial EEG fusion (`['CP2', 'PZ', 'FT7', 'P2']`) with $k = 10.0$ to equalize BCE against multichannel 4D MSE loss. Evaluates across the Top-5 balanced subjects under 5 LOSO folds:
+
+```bash
+python3 experiments/run_joint_gridsearch.py \
+    --config configs/hyperparameter_search_rnn/joint_gridsearch_loso_4ch_pz_k10.yaml \
+    --output-folder joint_gridsearch_loso_4ch_pz_k10
 ```
 
 
