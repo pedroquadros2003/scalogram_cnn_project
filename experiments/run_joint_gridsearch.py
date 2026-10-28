@@ -132,6 +132,21 @@ def main():
     best_candidate_id = None
     best_metric_val = -1.0 if is_loso else float("inf")
 
+    # Seed best candidate from previously evaluated candidates if resuming
+    for c_id, c_data in progress_data.items():
+        if not isinstance(c_data, dict) or c_data.get("status") in ["FAILED", "ERROR"]:
+            continue
+        if is_loso:
+            c_acc = c_data.get("mean_val_accuracy")
+            if c_acc is not None and c_acc > best_metric_val:
+                best_metric_val = c_acc
+                best_candidate_id = c_id
+        else:
+            c_loss = c_data.get("metrics", {}).get("val_loss")
+            if c_loss is not None and c_loss < best_metric_val:
+                best_metric_val = c_loss
+                best_candidate_id = c_id
+
     for idx, cand_params in enumerate(grid_candidates):
         cand_id = cand_params["candidate_id"]
         hash_id = make_hash_id(param_registry[cand_id], prefix="joint", size=10)

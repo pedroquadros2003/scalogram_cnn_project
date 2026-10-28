@@ -155,30 +155,15 @@ for k in range(horizon_steps):
 
 A avaliação revelou três regimes dinâmicos bem delimitados:
 
-1. **Zona de Alta Coerência de Fase ($10\text{ a }100\text{ ms}$):**
+
    - $10\text{ ms}$ ($1\text{ passo}$): $r \approx 0.99$, com retenção total de amplitude ($\approx 99\%$).
+
    - $50\text{ ms}$ ($5\text{ passos}$): $r \approx 0.87$.
-   - $100\text{ ms}$ ($10\text{ passos}$): $r \approx 0.64$. A rede acompanha as inflexões e a frequência fundamental dos ritmos dominantes (ondas Alfa a $\approx 10\text{ Hz}$, cujo semiciclo dura $\approx 50\text{ ms}$).
-2. **Zona de Desfasamento Rápido ($100\text{ a }250\text{ ms}$):**
+   
+   - $100\text{ ms}$ ($10\text{ passos}$): $r \approx 0.64$.
+
+
    - Aos $250\text{ ms}$ ($25\text{ passos}$), a correlação decai para $r \approx 0.10$. Pequenos erros acumulados deslocam a fase predita em relação à fase biológica real, ocasionando interferência destrutiva.
-3. **Zona de Amortecimento Assintótico à Média ($> 250\text{ ms}$ até $2.0\text{ s}$):**
+
    - A correlação atinge $r \approx 0.00$ a partir de $1.0\text{ s}$, e o MSE estabiliza em patamares elevados.
-   - O sinal gerado pelo modelo atenua as oscilações de alta frequência e converge para uma linha reta na média ($\hat{y} \to 0$ no domínio normalizado).
 
-### Causa Teórica do Achatamento da Curva
-Esse achatamento não é uma falha de otimização, mas uma propriedade matemática da função de perda quadrática (MSE) sob incerteza estocástica:
-- Ao prever passos distantes em um sistema caótico e não-estacionário, a distribuição condicional $p(x_{t+k} \mid \mathbf{X}_t)$ colapsa para a distribuição marginal do sinal.
-- A predição ótima que minimiza o valor esperado da perda quadrática $\mathbb{E}[(x - \hat{x})^2]$ é a **esperança condicional** $\hat{x}^* = \mathbb{E}[x_{t+k} \mid \mathbf{X}_t]$, que converge para a média do processo ($\mu = 0$).
-- Tentar prever oscilações estocásticas distantes fora de fase quadruplicaria a perda quadrática; prever a média minimiza a penalidade esperada.
-- Adicionalmente, o **viés de exposição** (*exposure bias*) [Bengio et al., 2015] amplifica o desvio à medida que o modelo se alimenta das próprias saídas imperfeitas.
-
----
-
-## 8. Referências Bibliográficas
-
-1. **Bengio, S., Vinyals, O., Jaitly, N., & Shazeer, N.** (2015). Scheduled sampling for sequence prediction with recurrent neural networks. *Advances in Neural Information Processing Systems (NeurIPS)*, 28, 1171–1179.
-2. **Box, G. E., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M.** (2015). *Time Series Analysis: Forecasting and Control* (5th ed.). John Wiley & Sons.
-3. **Cho, K., van Merriënboer, B., Gulcehre, C., Bahdanau, D., Bougares, F., Schwenk, H., & Bengio, Y.** (2014). Learning phrase representations using RNN encoder-decoder for statistical machine translation. *Proceedings of EMNLP*, 1724–1734.
-4. **Hochreiter, S., & Schmidhuber, J.** (1997). Long short-term memory. *Neural Computation*, 9(8), 1735–1780.
-5. **Niedermeyer, E., & da Silva, F. L.** (2005). *Electroencephalography: Basic Principles, Clinical Applications, and Related Fields* (5th ed.). Lippincott Williams & Wilkins.
-6. **Zheng, W. L., & Lu, B. L.** (2017). A multimodal approach to estimating vigilance with EEG and forehead EOG. *IEEE Transactions on Neural Systems and Rehabilitation Engineering*, 25(5), 486–496.
