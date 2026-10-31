@@ -51,7 +51,7 @@ No treinamento de horizonte 1-passo (`input_steps = 100`, `output_steps = 1`), o
 Para impedir contaminação de dados (*data leakage*), o sinal contínuo de EEG (canal `CP2`, sujeito 1 do dataset SEED-VIG a $f_s = 100.0\text{ Hz}$) é dividido estritamente por ordem cronológica. As estatísticas de média ($\mu_{\text{train}}$) e desvio padrão ($\sigma_{\text{train}}$) são calculadas **exclusivamente sobre os primeiros 80% do sinal**, sendo aplicadas para padronizar os 20% restantes (partição de validação):
 
 ```python
-# Trecho de experiments/internal/generate_high_granularity_rollout_plot.py
+# Trecho de experiments/generate_high_granularity_rollout_plot.py
 sig_data = SignalLoader.load_signal(str(target_file), dataset_type, resample_freq=resample_freq)
 raw_sig = sig_data.get_channel_signal(channel)
 sfreq = sig_data.sfreq
@@ -76,7 +76,7 @@ val_sig = norm_sig[n_train:]  # Partição de validação isolada (últimos 20%)
 Para garantir significância estatística sobre a partição de validação, são extraídas 100 janelas distribuídas uniformemente ao longo do intervalo disponível:
 
 ```python
-# Trecho de experiments/internal/generate_high_granularity_rollout_plot.py
+# Trecho de experiments/generate_high_granularity_rollout_plot.py
 valid_range = len(val_sig) - input_steps - horizon_steps
 step_size = valid_range // num_test_windows  # num_test_windows = 100
 start_indices = [i * step_size for i in range(num_test_windows)]
@@ -99,7 +99,7 @@ No rollout em malha fechada, o modelo gera previsões de forma recursiva: a cada
 $$\mathbf{X}_{t+1} = [x_{t-K+2}, x_{t-K+3}, \dots, x_t, \hat{x}_{t+1}]$$
 
 ```python
-# Trecho de experiments/internal/generate_high_granularity_rollout_plot.py
+# Trecho de experiments/generate_high_granularity_rollout_plot.py
 rollout_predictions = np.zeros((num_test_windows, horizon_steps), dtype=np.float32)
 current_input = np.copy(init_inputs)
 
@@ -124,7 +124,7 @@ for step in range(horizon_steps):
 Para cada horizonte temporal discreto $k \in \{1, 2, \dots, 200\}$ ($10\text{ ms}$ a $2000\text{ ms}$), o desempenho é avaliado através dos vetores de 100 amostras:
 
 ```python
-# Trecho de experiments/internal/generate_high_granularity_rollout_plot.py
+# Trecho de experiments/generate_high_granularity_rollout_plot.py
 pearson_r_list = []
 mse_list = []
 amp_ratio_list = []
