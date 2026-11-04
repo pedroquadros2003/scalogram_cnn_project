@@ -607,6 +607,25 @@ def main():
         joint_params["dropout_1"] = args.dropout_1
     if args.dropout_2 is not None:
         joint_params["dropout_2"] = args.dropout_2
+
+    # Compute balanced class weights if requested
+    class_weight = None
+    if getattr(args, "drowsy_weight", None) is not None:
+        class_weight = {0: 1.0, 1: float(args.drowsy_weight)}
+        logger.info(f"Using explicit drowsy class weight multiplier: {class_weight}")
+    elif str(getattr(args, "class_weight_mode", "none")).lower() in ["balanced", "auto", "true"]:
+        n_0 = sum(1 for item in train_indices if item[3] == 0)
+        n_1 = sum(1 for item in train_indices if item[3] == 1)
+        n_tot = n_0 + n_1
+        if n_0 > 0 and n_1 > 0:
+            w0 = float(n_tot) / (2.0 * float(n_0))
+            w1 = float(n_tot) / (2.0 * float(n_1))
+            class_weight = {0: w0, 1: w1}
+            logger.info(f"Computed balanced class weights from training partition (N0={n_0}, N1={n_1}): {class_weight}")
+        else:
+            logger.warning("One class has 0 samples in train partition. Cannot balance weights.")
+    if class_weight is not None:
+        joint_params["class_weight"] = class_weight
         
     joint_model = create_joint_model(
         predict_version=args.predict_version,
@@ -640,7 +659,9 @@ def main():
         "predict_version": args.predict_version,
         "classifier_version": args.classifier_version,
         "forecast_steps": args.forecast_steps,
-        "lead_time_sec": args.lead_time_sec
+        "lead_time_sec": args.lead_time_sec,
+        "class_weight_mode": getattr(args, "class_weight_mode", "none"),
+        "class_weight": class_weight
     }
     if history and history.history:
         metrics_dict["history"] = {k: [float(x) for x in v] for k, v in history.history.items()}

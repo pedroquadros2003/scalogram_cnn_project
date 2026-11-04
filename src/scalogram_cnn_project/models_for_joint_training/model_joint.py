@@ -9,6 +9,29 @@ OPTIMIZERS = {
     "rmsprop": tf.keras.optimizers.RMSprop,
 }
 
+@tf.keras.utils.register_keras_serializable(package="CustomLosses", name="WeightedBinaryCrossentropy")
+class WeightedBinaryCrossentropy(tf.keras.losses.Loss):
+    """
+    Weighted Binary Cross-Entropy loss for handling class imbalance.
+    Loss = - (w1 * y_true * log(y_pred) + w0 * (1 - y_true) * log(1 - y_pred))
+    """
+    def __init__(self, w0=1.0, w1=1.0, name="weighted_binary_crossentropy", **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.w0 = float(w0)
+        self.w1 = float(w1)
+
+    def call(self, y_true, y_pred):
+        y_true = tf.cast(y_true, tf.float32)
+        y_pred = tf.cast(y_pred, tf.float32)
+        y_pred = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)
+        loss = - (self.w1 * y_true * tf.math.log(y_pred) + self.w0 * (1.0 - y_true) * tf.math.log(1.0 - y_pred))
+        return tf.reduce_mean(loss, axis=-1)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"w0": self.w0, "w1": self.w1})
+        return config
+
 def create_joint_model(
     predict_version: str = "v0",
     classifier_version: str = "v0",
@@ -163,8 +186,17 @@ def create_joint_model(
         "forecast_output": 1.0 - alpha
     }
     
+    class_weight = parameters.get("class_weight", None)
+    if class_weight is not None and isinstance(class_weight, dict):
+        w0 = float(class_weight.get(0, 1.0))
+        w1 = float(class_weight.get(1, 1.0))
+        clf_loss = WeightedBinaryCrossentropy(w0=w0, w1=w1)
+        logger.info(f"Using WeightedBinaryCrossentropy for classification (w0={w0:.4f}, w1={w1:.4f})")
+    else:
+        clf_loss = "binary_crossentropy"
+
     losses = {
-        "classification_output": "binary_crossentropy",
+        "classification_output": clf_loss,
         "forecast_output": "mse"
     }
     
